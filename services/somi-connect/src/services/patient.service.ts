@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { PatientProfileModel } from '../models/patient-profile.model.js';
 import { UserModel } from '../models/user.model.js';
 import { hashPassword } from './auth.service.js';
-import { badRequest, notFound, conflict, forbidden } from '../lib/errors.js';
+import { badRequest, notFound, conflict } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 
 // ---------------------------------------------------------------------------
@@ -316,8 +316,8 @@ export async function updatePatient(
  */
 export async function loadAndAuthorizePatient(
   patientId: string,
-  callerUserId: string,
-  callerRole: 'therapist' | 'admin',
+  _callerUserId: string,
+  _callerRole: 'therapist' | 'admin',
 ) {
   const profileDoc = await PatientProfileModel.findById(patientId).lean();
   if (!profileDoc) {

@@ -43,7 +43,7 @@ import type { Exercise, TaxonomyTag } from '../../types';
 
 const mockGetExercise = vi.mocked(getExercise);
 const mockArchiveExercise = vi.mocked(archiveExercise);
-const mockRestoreExercise = vi.mocked(restoreExercise);
+const _mockRestoreExercise = vi.mocked(restoreExercise);
 const mockListTaxonomy = vi.mocked(listTaxonomy);
 
 const TAXONOMY_TAGS: TaxonomyTag[] = [

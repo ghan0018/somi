@@ -16,9 +16,6 @@ export default function useIsMobile(breakpoint = MOBILE_BREAKPOINT): boolean {
     const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
 
-    // Set initial value in case SSR hydration was different
-    setIsMobile(mql.matches);
-
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, [breakpoint]);

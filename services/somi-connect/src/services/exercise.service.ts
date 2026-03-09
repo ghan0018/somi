@@ -239,7 +239,7 @@ export async function listExercises(
     }
   }
 
-  let tagLookup = new Map<string, string>();
+  const tagLookup = new Map<string, string>();
   if (allTagIds.size > 0) {
     const taxonomyDocs = await TaxonomyModel.find({
       _id: { $in: [...allTagIds].map((id) => new mongoose.Types.ObjectId(id)) },
