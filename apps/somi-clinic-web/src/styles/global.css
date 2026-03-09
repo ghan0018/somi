@@ -1,0 +1,147 @@
+/* =================================================================
+   SOMI Clinic — Global Styles
+   ================================================================= */
+
+/* ---------------------------------------------------------------
+   CSS Custom Properties
+   --------------------------------------------------------------- */
+:root {
+  --somi-navy: #1B3A4B;
+  --somi-teal: #6DB6B0;
+  --somi-gold: #D4A843;
+  --somi-cream: #E8DCC8;
+  --somi-dark-teal: #2C7A7B;
+  --somi-mint-bg: #F0F5F4;
+  --somi-white: #FFFFFF;
+
+  --font-heading: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ---------------------------------------------------------------
+   Base resets
+   --------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------------------------------------------------------------
+   Heading overrides — Playfair Display for all headings
+   --------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--somi-navy);
+}
+
+/* Ant Design Typography component heading classes */
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-typography h5,
+.ant-typography h6 {
+  font-family: var(--font-heading);
+  color: var(--somi-navy);
+}
+
+/* ---------------------------------------------------------------
+   Utility classes
+   --------------------------------------------------------------- */
+
+/* Page header: title left, actions right — stacks on mobile */
+.somi-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.somi-page-header h2,
+.somi-page-header h3 {
+  margin: 0;
+}
+
+/* Uppercase teal section label */
+.somi-section-label {
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--somi-teal);
+  margin-bottom: 8px;
+  font-family: var(--font-body);
+}
+
+/* Teal accent divider */
+.somi-divider-teal {
+  border-top-color: var(--somi-teal) !important;
+  border-top-width: 2px !important;
+}
+
+/* ---------------------------------------------------------------
+   Responsive — Compact / Mobile (<768px)
+   --------------------------------------------------------------- */
+@media (max-width: 767px) {
+  /* Stack page header vertically */
+  .somi-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  /* Let actions row wrap and fill width */
+  .somi-page-header-actions {
+    width: 100%;
+  }
+
+  /* Reduce heading size on small screens */
+  .somi-page-header h2 {
+    font-size: 22px !important;
+  }
+
+  /* Reduce card padding */
+  .ant-card {
+    padding: 0;
+  }
+
+  .ant-card .ant-card-body {
+    padding: 12px !important;
+  }
+
+  /* Tighter spacing on page content */
+  .somi-content {
+    margin: 12px !important;
+    padding: 12px !important;
+  }
+
+  /* Let tables scroll horizontally */
+  .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Filter rows should wrap on mobile */
+  .somi-filter-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Responsive — Tablet (768px – 1024px)
+   --------------------------------------------------------------- */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .somi-page-header h2 {
+    font-size: 24px !important;
+  }
+}
