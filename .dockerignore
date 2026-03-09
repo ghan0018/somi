@@ -1,0 +1,39 @@
+# Dependencies (rebuilt inside Docker)
+node_modules
+services/somi-connect/node_modules
+apps/*/node_modules
+
+# Build output (rebuilt inside Docker)
+dist
+services/somi-connect/dist
+apps/*/dist
+
+# Git and CI
+.git
+.github
+
+# Claude Code
+.claude
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Test coverage
+coverage
+services/somi-connect/coverage
+apps/*/coverage
+
+# Documentation
+requirements
+*.md
+
+# Frontend (not needed for backend Docker build)
+apps
+
+# Editor / OS
+.DS_Store
+.idea
+.vscode
+*.sw?

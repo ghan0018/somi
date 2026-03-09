@@ -1,0 +1,124 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      component:
+        description: 'Component to rollback'
+        required: true
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+      commit_sha:
+        description: 'Git SHA to rollback to'
+        required: true
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: somi-connect
+
+jobs:
+  rollback-backend:
+    name: rollback-backend
+    if: inputs.component == 'backend' || inputs.component == 'both'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.environment == 'production' && secrets.PRODUCTION_AWS_ROLE_ARN || secrets.STAGING_AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition somi-connect-${{ inputs.environment }} \
+            --query taskDefinition \
+            > task-definition.json
+
+      - name: Update task definition with rollback image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: somi-connect
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ inputs.commit_sha }}
+
+      - name: Deploy rollback
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: somi-connect-${{ inputs.environment }}
+          cluster: somi-${{ inputs.environment }}
+          wait-for-service-stability: true
+
+  rollback-frontend:
+    name: rollback-frontend
+    if: inputs.component == 'frontend' || inputs.component == 'both'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout at rollback commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies and build
+        run: npm ci && npm run build --workspace=apps/somi-clinic-web
+        env:
+          VITE_API_BASE_URL: ${{ inputs.environment == 'production' && 'https://api.somi.health' || 'https://api.staging.somi.health' }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.environment == 'production' && secrets.PRODUCTION_AWS_ROLE_ARN || secrets.STAGING_AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        run: |
+          BUCKET=somi-clinic-web-${{ inputs.environment }}
+          aws s3 sync apps/somi-clinic-web/dist/ s3://$BUCKET \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html" \
+            --exclude "*.json"
+          aws s3 cp apps/somi-clinic-web/dist/index.html s3://$BUCKET/index.html \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      - name: Invalidate CloudFront
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            DIST_ID="${{ secrets.PRODUCTION_CLOUDFRONT_DISTRIBUTION_ID }}"
+          else
+            DIST_ID="${{ secrets.STAGING_CLOUDFRONT_DISTRIBUTION_ID }}"
+          fi
+          aws cloudfront create-invalidation \
+            --distribution-id "$DIST_ID" \
+            --paths "/index.html" "/"
