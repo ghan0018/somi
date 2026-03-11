@@ -1,9 +1,7 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches:
-      - 'release/**'
+  workflow_dispatch:
 
 # Prevent concurrent deploys to production
 concurrency:
