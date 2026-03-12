@@ -20,7 +20,7 @@ export interface AssignmentInput {
 
 export interface SessionInput {
   title?: string;
-  notesForTherapistOnly?: string;
+  sessionNotes?: string;
   timesPerDay: number;
   assignments: AssignmentInput[];
 }
@@ -80,7 +80,7 @@ export async function resolveSessions(inputSessions: SessionInput[]): Promise<IS
       sessionKey: `sess_${padIndex(sIdx)}`,
       index: sIdx,
       title: input.title,
-      notesForTherapistOnly: input.notesForTherapistOnly,
+      sessionNotes: input.sessionNotes,
       timesPerDay: input.timesPerDay,
       assignments,
     });
@@ -92,12 +92,10 @@ export async function resolveSessions(inputSessions: SessionInput[]): Promise<IS
 // ---------------------------------------------------------------------------
 // enrichPlan
 // Enrich a plan with exercise snapshots and effectiveParams.
-// stripTherapistNotes: true for client view, false for therapist view.
 // ---------------------------------------------------------------------------
 
 export async function enrichPlan(
   plan: TreatmentPlanDocument,
-  stripTherapistNotes: boolean,
 ): Promise<object> {
   const plainPlan = plan.toJSON() as Record<string, unknown>;
 
@@ -125,12 +123,9 @@ export async function enrichPlan(
       sessionKey: session.sessionKey,
       index: session.index,
       title: session.title,
+      sessionNotes: session.sessionNotes,
       timesPerDay: session.timesPerDay,
     };
-
-    if (!stripTherapistNotes) {
-      sessionObj['notesForTherapistOnly'] = session.notesForTherapistOnly;
-    }
 
     sessionObj['assignments'] = session.assignments.map((assignment) => {
       const version = versionMap.get(assignment.exerciseVersionId);
@@ -252,6 +247,7 @@ export async function publishPlan(planId: string, userId: string): Promise<objec
   plan.status = 'published';
   plan.publishedAt = new Date();
   plan.publishedBy = userId;
+  plan.activeSessionIndex = 0;
   await plan.save();
 
   logger.info('Treatment plan published', { planId, publishedBy: userId });
@@ -273,6 +269,62 @@ export async function archivePlan(planId: string): Promise<object> {
   await plan.save();
 
   logger.info('Treatment plan archived', { planId });
+
+  return plan.toJSON();
+}
+
+// ---------------------------------------------------------------------------
+// advanceSession
+// Advance the active session index by one (published plans only).
+// ---------------------------------------------------------------------------
+
+export async function advanceSession(planId: string): Promise<object> {
+  const plan = await TreatmentPlanModel.findById(planId);
+  if (!plan) {
+    throw notFound(`Treatment plan '${planId}' not found`);
+  }
+
+  if (plan.status !== 'published') {
+    throw unprocessable('Can only advance sessions on a published plan');
+  }
+
+  const maxIndex = plan.sessions.length - 1;
+  if (plan.activeSessionIndex >= maxIndex) {
+    throw unprocessable('Already on the last session');
+  }
+
+  plan.activeSessionIndex += 1;
+  await plan.save();
+
+  logger.info('Treatment plan session advanced', {
+    planId,
+    activeSessionIndex: plan.activeSessionIndex,
+  });
+
+  return plan.toJSON();
+}
+
+// ---------------------------------------------------------------------------
+// revertToDraft
+// Revert a published plan back to draft status so it can be edited.
+// ---------------------------------------------------------------------------
+
+export async function revertToDraft(planId: string): Promise<object> {
+  const plan = await TreatmentPlanModel.findById(planId);
+  if (!plan) {
+    throw notFound(`Treatment plan '${planId}' not found`);
+  }
+
+  if (plan.status !== 'published') {
+    throw unprocessable('Only published plans can be reverted to draft');
+  }
+
+  plan.status = 'draft';
+  plan.publishedAt = undefined;
+  plan.publishedBy = undefined;
+  await plan.save();
+
+  logger.info('Treatment plan reverted to draft', { planId });
 
   return plan.toJSON();
 }
@@ -315,7 +367,7 @@ export async function getTherapistPlan(patientId: string): Promise<object | null
     return null;
   }
 
-  return enrichPlan(plan, false /* keep therapist notes */);
+  return enrichPlan(plan);
 }
 
 // ---------------------------------------------------------------------------
@@ -332,7 +384,7 @@ export async function getClientPlan(patientId: string): Promise<object | null> {
     return null;
   }
 
-  return enrichPlan(plan, true /* strip therapist notes */);
+  return enrichPlan(plan);
 }
 
 // ---------------------------------------------------------------------------

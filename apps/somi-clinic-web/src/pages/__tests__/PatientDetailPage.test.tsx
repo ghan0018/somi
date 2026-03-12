@@ -15,6 +15,17 @@ vi.mock('../../api/patients', () => ({
   updatePatient: vi.fn(),
 }));
 
+vi.mock('../../api/plans', () => ({
+  getTherapistPlan: vi.fn().mockResolvedValue(null),
+  publishPlan: vi.fn(),
+  archivePlan: vi.fn(),
+  updatePlanSettings: vi.fn(),
+}));
+
+vi.mock('../../api/exercises', () => ({
+  listExercises: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+}));
+
 // ---------------------------------------------------------------------------
 // Mock AuthContext (avoids upstream import errors from shared layout code)
 // ---------------------------------------------------------------------------

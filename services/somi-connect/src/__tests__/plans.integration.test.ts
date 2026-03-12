@@ -250,7 +250,7 @@ describe('GET /v1/clinic/patients/:patientId/plan', () => {
         sessions: [
           {
             title: 'Morning Session',
-            notesForTherapistOnly: 'Patient struggles with this',
+            sessionNotes: 'Patient struggles with this',
             timesPerDay: 2,
             assignments: [
               { exerciseId: exercise1Id },
@@ -292,13 +292,13 @@ describe('GET /v1/clinic/patients/:patientId/plan', () => {
     expect(assignments[1].effectiveParams).toMatchObject({ seconds: 45 });
   });
 
-  it('includes notesForTherapistOnly in therapist view', async () => {
+  it('includes sessionNotes in therapist view', async () => {
     const res = await request(app)
       .get(`/v1/clinic/patients/${patientId}/plan`)
       .set('Authorization', `Bearer ${therapistToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.sessions[0].notesForTherapistOnly).toBe('Patient struggles with this');
+    expect(res.body.sessions[0].sessionNotes).toBe('Patient struggles with this');
   });
 
   it('returns 404 when no plan exists', async () => {
@@ -388,7 +388,7 @@ describe('POST /v1/clinic/patients/:patientId/plan/:planId/publish', () => {
     planId = res.body.planId as string;
   });
 
-  it('publishes draft plan and sets publishedAt', async () => {
+  it('publishes draft plan and sets publishedAt and activeSessionIndex', async () => {
     const res = await request(app)
       .post(`/v1/clinic/patients/${patientId}/plan/${planId}/publish`)
       .set('Authorization', `Bearer ${therapistToken}`);
@@ -397,6 +397,7 @@ describe('POST /v1/clinic/patients/:patientId/plan/:planId/publish', () => {
     expect(res.body.status).toBe('published');
     expect(res.body.publishedAt).toBeTruthy();
     expect(res.body.publishedBy).toBe(therapistId);
+    expect(res.body.activeSessionIndex).toBe(0);
   });
 
   it('returns 422 if plan is already published', async () => {
@@ -558,7 +559,7 @@ describe('GET /v1/me/plan', () => {
         sessions: [
           {
             title: 'Morning Routine',
-            notesForTherapistOnly: 'SECRET: Patient has compliance issues',
+            sessionNotes: 'Remember to do these exercises daily',
             timesPerDay: 1,
             assignments: [{ exerciseId: exercise1Id }],
           },
@@ -581,14 +582,14 @@ describe('GET /v1/me/plan', () => {
     expect(res.body.status).toBe('published');
   });
 
-  it('strips notesForTherapistOnly from the client response', async () => {
+  it('includes sessionNotes in the client response', async () => {
     const res = await request(app)
       .get('/v1/me/plan')
       .set('Authorization', `Bearer ${clientToken}`);
 
     expect(res.status).toBe(200);
     const session = res.body.sessions[0];
-    expect(session).not.toHaveProperty('notesForTherapistOnly');
+    expect(session.sessionNotes).toBe('Remember to do these exercises daily');
   });
 
   it('returns 404 when no published plan exists for the client', async () => {
@@ -618,5 +619,186 @@ describe('GET /v1/me/plan', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('UNAUTHORIZED');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /v1/clinic/patients/:patientId/plan/:planId/advance-session
+// ---------------------------------------------------------------------------
+describe('POST /v1/clinic/patients/:patientId/plan/:planId/advance-session', () => {
+  let planId: string;
+
+  beforeEach(async () => {
+    // Create a plan with 2 sessions so we can advance
+    const createRes = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan`)
+      .set('Authorization', `Bearer ${therapistToken}`)
+      .send({
+        sessions: [
+          {
+            title: 'Week 1',
+            timesPerDay: 1,
+            assignments: [{ exerciseId: exercise1Id }],
+          },
+          {
+            title: 'Week 2',
+            timesPerDay: 1,
+            assignments: [{ exerciseId: exercise2Id }],
+          },
+        ],
+      });
+    planId = createRes.body.planId as string;
+
+    // Publish so we can advance
+    await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/publish`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+  });
+
+  it('increments activeSessionIndex on a published plan', async () => {
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/advance-session`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.activeSessionIndex).toBe(1);
+  });
+
+  it('returns 422 when already on the last session', async () => {
+    // Advance to session index 1 (the last one)
+    await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/advance-session`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    // Try to advance again
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/advance-session`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('UNPROCESSABLE_ENTITY');
+  });
+
+  it('returns 422 when plan is not published (draft)', async () => {
+    // Create a draft plan (don't publish)
+    const draftRes = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan`)
+      .set('Authorization', `Bearer ${therapistToken}`)
+      .send({ sessions: [validSession()] });
+    const draftPlanId = draftRes.body.planId as string;
+
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${draftPlanId}/advance-session`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('UNPROCESSABLE_ENTITY');
+  });
+
+  it('returns 403 for client role', async () => {
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/advance-session`)
+      .set('Authorization', `Bearer ${clientToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('therapist can advance session for any patient', async () => {
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/advance-session`)
+      .set('Authorization', `Bearer ${otherTherapistToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.activeSessionIndex).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /v1/clinic/patients/:patientId/plan/:planId/revert-to-draft
+// ---------------------------------------------------------------------------
+describe('POST /v1/clinic/patients/:patientId/plan/:planId/revert-to-draft', () => {
+  let planId: string;
+
+  beforeEach(async () => {
+    const createRes = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan`)
+      .set('Authorization', `Bearer ${therapistToken}`)
+      .send({ sessions: [validSession()] });
+    planId = createRes.body.planId as string;
+
+    // Publish so we can revert
+    await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/publish`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+  });
+
+  it('reverts a published plan to draft and clears publishedAt/publishedBy', async () => {
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/revert-to-draft`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('draft');
+    expect(res.body.publishedAt).toBeFalsy();
+    expect(res.body.publishedBy).toBeFalsy();
+  });
+
+  it('returns 422 when plan is not published (draft)', async () => {
+    // Create a draft plan (don't publish)
+    const draftRes = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan`)
+      .set('Authorization', `Bearer ${therapistToken}`)
+      .send({ sessions: [validSession()] });
+    const draftPlanId = draftRes.body.planId as string;
+
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${draftPlanId}/revert-to-draft`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('UNPROCESSABLE_ENTITY');
+  });
+
+  it('returns 403 for client role', async () => {
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/revert-to-draft`)
+      .set('Authorization', `Bearer ${clientToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('therapist can revert plan for any patient', async () => {
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/revert-to-draft`)
+      .set('Authorization', `Bearer ${otherTherapistToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('draft');
+  });
+
+  it('reverted plan can be edited via PUT', async () => {
+    // Revert
+    await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan/${planId}/revert-to-draft`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    // Now replace sessions (should work since it's draft again)
+    const res = await request(app)
+      .put(`/v1/clinic/patients/${patientId}/plan/${planId}`)
+      .set('Authorization', `Bearer ${therapistToken}`)
+      .send({
+        sessions: [
+          {
+            title: 'Updated Week 1',
+            timesPerDay: 2,
+            assignments: [{ exerciseId: exercise2Id }],
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.sessions[0].title).toBe('Updated Week 1');
   });
 });
