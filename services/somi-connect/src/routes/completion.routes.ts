@@ -66,10 +66,11 @@ const recordCompletionHandler: RequestHandler = async (req, res, next) => {
       throw badRequest('Idempotency-Key header is required');
     }
 
-    const { dateLocal, occurrence, exerciseVersionId } = req.body as {
+    const { dateLocal, occurrence, exerciseVersionId, source } = req.body as {
       dateLocal?: string;
       occurrence?: number;
       exerciseVersionId?: string;
+      source?: string;
     };
 
     if (!dateLocal) {
@@ -82,6 +83,11 @@ const recordCompletionHandler: RequestHandler = async (req, res, next) => {
       throw badRequest('exerciseVersionId is required');
     }
 
+    const validSources = ['mobile_ios', 'mobile_android', 'web'] as const;
+    const resolvedSource = source && validSources.includes(source as typeof validSources[number])
+      ? (source as typeof validSources[number])
+      : 'web';
+
     // Resolve userId -> patientId
     const patientId = await getPatientIdByUserId(userId);
 
@@ -91,6 +97,7 @@ const recordCompletionHandler: RequestHandler = async (req, res, next) => {
       occurrence: Number(occurrence),
       exerciseVersionId,
       idempotencyKey,
+      source: resolvedSource,
     });
 
     if (!isIdempotentReturn) {

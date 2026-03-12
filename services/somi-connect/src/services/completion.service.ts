@@ -221,8 +221,9 @@ export async function recordCompletion(params: {
   occurrence: number;
   exerciseVersionId: string;
   idempotencyKey: string;
+  source?: 'mobile_ios' | 'mobile_android' | 'web';
 }): Promise<{ completion: CompletionResult; isIdempotentReturn: boolean }> {
-  const { patientId, dateLocal, occurrence, exerciseVersionId, idempotencyKey } = params;
+  const { patientId, dateLocal, occurrence, exerciseVersionId, idempotencyKey, source = 'web' } = params;
 
   // Validate dateLocal format
   if (!DATE_LOCAL_RE.test(dateLocal)) {
@@ -316,7 +317,7 @@ export async function recordCompletion(params: {
     exerciseId: matchingAssignment.exerciseId,
     exerciseVersionId,
     completedAt,
-    source: 'web' as const,
+    source,
     idempotencyKey,
   });
 

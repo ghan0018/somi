@@ -1,0 +1,42 @@
+name: SOMIHome
+options:
+  bundleIdPrefix: com.somi
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "15.0"
+configs:
+  Debug: debug
+  Release: release
+targets:
+  SOMIHome:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SOMIHome
+        excludes:
+          - "**/__Snapshots__"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.somi.home
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        API_BASE_URL: "http://localhost:3000"
+      configs:
+        Debug:
+          DEBUG_INFORMATION_FORMAT: dwarf
+        Release:
+          DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+    info:
+      path: SOMIHome/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: SOMI Home
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        NSCameraUsageDescription: "SOMI Home uses your camera to record practice videos."
+        NSPhotoLibraryUsageDescription: "SOMI Home accesses your photos to upload practice videos."
+        API_BASE_URL: "$(API_BASE_URL)"
+        UILaunchStoryboardName: ""
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIStatusBarStyle: UIStatusBarStyleLightContent

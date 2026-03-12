@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="somi_navy">#FF1B3A4B</color>
+    <color name="somi_teal">#FF6DB6B0</color>
+    <color name="somi_gold">#FFD4A843</color>
+    <color name="somi_mint">#FFF0F5F4</color>
+    <color name="somi_dark_teal">#FF2C7A7B</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
