@@ -72,7 +72,10 @@ final class TodayViewUITests: XCTestCase {
             "Completion circle button should be present"
         )
 
-        completionCircle.tap()
+        // Use coordinate-based tap to bypass isHittable check — the button uses
+        // Color.clear with contentShape, which XCUITest may report as not hittable
+        // even though the coordinate is valid and tappable.
+        completionCircle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
 
         // After tapping the list should still be visible (no crash / navigation away)
         XCTAssertTrue(
@@ -97,12 +100,15 @@ final class TodayViewUITests: XCTestCase {
             return
         }
 
-        // Tap every completion circle to finish the first round
+        // Tap every completion circle to finish the first round.
+        // Use coordinate-based tap to bypass isHittable check — the button uses
+        // Color.clear with contentShape, which XCUITest may report as not hittable
+        // even though the coordinate is valid and tappable.
         let count = circleQuery.count
         for i in 0..<count {
             let circle = circleQuery.element(boundBy: i)
             if circle.exists {
-                circle.tap()
+                circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 // Brief wait between taps for state to update
                 _ = circle.waitForExistence(timeout: 1)
             }
@@ -141,11 +147,14 @@ final class TodayViewUITests: XCTestCase {
             return
         }
 
+        // Use coordinate-based tap to bypass isHittable check — the button uses
+        // Color.clear with contentShape, which XCUITest may report as not hittable
+        // even though the coordinate is valid and tappable.
         let count = circleQuery.count
         for i in 0..<count {
             let circle = circleQuery.element(boundBy: i)
             if circle.exists {
-                circle.tap()
+                circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 _ = circle.waitForExistence(timeout: 1)
             }
         }
