@@ -22,6 +22,9 @@ interface Config {
   AWS_REGION: string | undefined;
   AWS_S3_LIBRARY_BUCKET: string | undefined;
   AWS_S3_PATIENT_BUCKET: string | undefined;
+
+  // Test helpers (non-production only)
+  TEST_SECRET: string | undefined;
 }
 
 function requireEnv(name: string): string {
@@ -60,4 +63,8 @@ export const config: Config = {
   AWS_REGION: optionalEnv('AWS_REGION'),
   AWS_S3_LIBRARY_BUCKET: optionalEnv('AWS_S3_LIBRARY_BUCKET'),
   AWS_S3_PATIENT_BUCKET: optionalEnv('AWS_S3_PATIENT_BUCKET'),
+
+  TEST_SECRET: process.env['NODE_ENV'] !== 'production'
+    ? (process.env['TEST_SECRET'] ?? 'test-secret-dev')
+    : optionalEnv('TEST_SECRET'),
 };

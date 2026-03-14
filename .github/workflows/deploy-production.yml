@@ -20,11 +20,20 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
 
-  # ---- Quality Gate 2: Security Scanning ----
+  # ---- Quality Gate 2: iOS Tests ----
+  ios:
+    uses: ./.github/workflows/ios-uitests.yml
+    secrets: inherit
+
+  # ---- Quality Gate 3: Android Tests ----
+  android:
+    uses: ./.github/workflows/android-tests.yml
+
+  # ---- Quality Gate 4: Security Scanning ----
   security-scan:
     name: security-scan
     runs-on: ubuntu-latest
-    needs: [ci]
+    needs: [ci, ios, android]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,7 +67,7 @@ jobs:
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
-  # ---- Quality Gate 3: Manual Approval ----
+  # ---- Quality Gate 5: Manual Approval ----
   approval:
     name: production-approval
     runs-on: ubuntu-latest

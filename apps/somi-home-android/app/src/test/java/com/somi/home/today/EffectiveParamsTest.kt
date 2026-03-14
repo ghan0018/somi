@@ -1,5 +1,6 @@
 package com.somi.home.today
 
+import com.somi.home.core.models.ExerciseParams
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -24,13 +25,8 @@ class EffectiveParamsTest {
 
     @Test
     fun `returns defaultParams when override is null`() {
-        // Arrange
         val defaults = ExerciseParams(reps = 10, sets = 3, seconds = 30)
-
-        // Act
         val result = effectiveParams(defaults, null)
-
-        // Assert
         assertEquals(10, result.reps)
         assertEquals(3, result.sets)
         assertEquals(30, result.seconds)
@@ -38,14 +34,9 @@ class EffectiveParamsTest {
 
     @Test
     fun `override wins over default for each param`() {
-        // Arrange
         val defaults = ExerciseParams(reps = 10, sets = 3, seconds = 30)
         val override = ExerciseParams(reps = 20, sets = 5, seconds = 60)
-
-        // Act
         val result = effectiveParams(defaults, override)
-
-        // Assert
         assertEquals(20, result.reps)
         assertEquals(5, result.sets)
         assertEquals(60, result.seconds)
@@ -53,14 +44,9 @@ class EffectiveParamsTest {
 
     @Test
     fun `partial override merges correctly`() {
-        // Arrange — override only reps, keep default sets and seconds
         val defaults = ExerciseParams(reps = 10, sets = 3, seconds = 30)
         val override = ExerciseParams(reps = 20, sets = null, seconds = null)
-
-        // Act
         val result = effectiveParams(defaults, override)
-
-        // Assert
         assertEquals(20, result.reps)
         assertEquals(3, result.sets)
         assertEquals(30, result.seconds)
@@ -68,14 +54,9 @@ class EffectiveParamsTest {
 
     @Test
     fun `override with all nulls keeps defaults`() {
-        // Arrange
         val defaults = ExerciseParams(reps = 10, sets = 3, seconds = 30)
         val override = ExerciseParams(reps = null, sets = null, seconds = null)
-
-        // Act
         val result = effectiveParams(defaults, override)
-
-        // Assert
         assertEquals(10, result.reps)
         assertEquals(3, result.sets)
         assertEquals(30, result.seconds)
@@ -83,13 +64,8 @@ class EffectiveParamsTest {
 
     @Test
     fun `defaults with null fields preserved when no override`() {
-        // Arrange
         val defaults = ExerciseParams(reps = null, sets = null, seconds = 60)
-
-        // Act
         val result = effectiveParams(defaults, null)
-
-        // Assert
         assertNull(result.reps)
         assertNull(result.sets)
         assertEquals(60, result.seconds)

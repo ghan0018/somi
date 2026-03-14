@@ -81,6 +81,25 @@ struct Endpoint {
         )
     }
 
+    static func deleteCompletion(
+        dateLocal: String,
+        occurrence: Int,
+        exerciseVersionId: String
+    ) -> Endpoint {
+        let payload = CompletionRequest(
+            dateLocal: dateLocal,
+            occurrence: occurrence,
+            exerciseVersionId: exerciseVersionId,
+            source: "mobile_ios"
+        )
+        let body = try? JSONEncoder().encode(payload)
+        return Endpoint(
+            path: "/v1/me/completions",
+            method: .DELETE,
+            body: body
+        )
+    }
+
     // MARK: - Plan
 
     static func getPlan() -> Endpoint {

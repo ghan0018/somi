@@ -18,6 +18,8 @@ export interface ISession {
   sessionKey: string;
   index: number;
   title?: string;
+  /** Patient-visible notes from the therapist — safe to return to clients */
+  sessionNotes?: string;
   /** PHI — must never be returned to clients */
   notesForTherapistOnly?: string;
   timesPerDay: number;
@@ -65,6 +67,7 @@ const SessionSchema = new Schema<ISession>(
     sessionKey: { type: String, required: true },
     index: { type: Number, required: true, min: 0 },
     title: { type: String, trim: true },
+    sessionNotes: { type: String, trim: true },
     notesForTherapistOnly: { type: String },
     timesPerDay: {
       type: Number,

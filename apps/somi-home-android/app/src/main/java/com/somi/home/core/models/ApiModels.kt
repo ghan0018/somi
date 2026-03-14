@@ -40,17 +40,13 @@ data class TokenResponse(
 
 @JsonClass(generateAdapter = true)
 data class TodayViewResponse(
-    val planId: String,
     val dateLocal: String,
-    val sessions: List<TodaySession>
-)
-
-@JsonClass(generateAdapter = true)
-data class TodaySession(
     val sessionKey: String,
-    val title: String?,
+    val sessionTitle: String?,
+    val sessionNotes: String?,
     val timesPerDay: Int,
-    val assignments: List<TodayAssignment>
+    val assignments: List<TodayAssignment>,
+    val overallCompletionRate: Double
 )
 
 @JsonClass(generateAdapter = true)
@@ -58,7 +54,8 @@ data class TodayAssignment(
     val assignmentKey: String,
     val exerciseVersionId: String,
     val exercise: ExerciseInfo,
-    val paramsOverride: ExerciseParams?,
+    // Backend returns pre-merged params under this key (default + any plan override applied).
+    val effectiveParams: ExerciseParams?,
     val completions: List<CompletionEntry>
 )
 
@@ -66,7 +63,9 @@ data class TodayAssignment(
 data class ExerciseInfo(
     val title: String,
     val description: String,
-    val defaultParams: ExerciseParams,
+    // Absent from today-view responses (backend pre-merges into effectiveParams);
+    // present in plan-view responses.
+    val defaultParams: ExerciseParams?,
     val mediaId: String?
 )
 
@@ -80,7 +79,8 @@ data class ExerciseParams(
 @JsonClass(generateAdapter = true)
 data class CompletionEntry(
     val occurrence: Int,
-    val completedAt: String
+    val completed: Boolean,
+    val completedAt: String? // null when not yet completed
 )
 
 @JsonClass(generateAdapter = true)
@@ -146,6 +146,13 @@ data class CompletionRequest(
     val occurrence: Int,
     val exerciseVersionId: String,
     val source: String
+)
+
+@JsonClass(generateAdapter = true)
+data class UncompletionRequest(
+    val dateLocal: String,
+    val occurrence: Int,
+    val exerciseVersionId: String
 )
 
 @JsonClass(generateAdapter = true)

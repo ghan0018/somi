@@ -2,6 +2,8 @@ package com.somi.home.sync
 
 import com.somi.home.core.database.PendingCompletionDao
 import com.somi.home.core.database.PendingCompletionEntity
+import com.somi.home.core.models.CompletionRequest
+import com.somi.home.core.models.CompletionResponse
 import com.somi.home.core.network.ApiService
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -32,7 +34,7 @@ class CompletionSyncWorkerTest {
 
     @Before
     fun setUp() {
-        coEvery { mockDao.getAllPending() } returns listOf(testEntity)
+        coEvery { mockDao.getAll() } returns listOf(testEntity)
     }
 
     /**
@@ -41,27 +43,23 @@ class CompletionSyncWorkerTest {
      */
     private suspend fun syncItem(item: PendingCompletionEntity): SyncResult {
         return try {
-            val request = com.somi.home.today.CompletionRequest(
-                dateLocal = item.dateLocal,
-                occurrence = item.occurrence,
-                exerciseVersionId = item.exerciseVersionId,
-                source = item.source
+            val completionResponse = mockApiService.postCompletion(
+                idempotencyKey = item.idempotencyKey,
+                body = CompletionRequest(
+                    dateLocal = item.dateLocal,
+                    occurrence = item.occurrence,
+                    exerciseVersionId = item.exerciseVersionId,
+                    source = item.source
+                )
             )
-            val response = mockApiService.postCompletion(request, item.idempotencyKey)
-
-            when {
-                response.isSuccessful -> {
-                    mockDao.delete(item.id)
-                    SyncResult.SUCCESS
-                }
-                response.code() == 409 -> {
-                    // Already recorded — idempotent success
-                    mockDao.delete(item.id)
-                    SyncResult.SUCCESS
-                }
-                response.code() in 400..499 -> {
-                    // Permanent client error — discard
-                    mockDao.delete(item.id)
+            // postCompletion returns CompletionResponse on success (suspend, throws on error)
+            mockDao.delete(item)
+            SyncResult.SUCCESS
+        } catch (e: retrofit2.HttpException) {
+            when (val code = e.code()) {
+                409, in 400..499 -> {
+                    // Idempotent success or permanent client error — discard
+                    mockDao.delete(item)
                     SyncResult.SUCCESS
                 }
                 else -> {
@@ -82,78 +80,67 @@ class CompletionSyncWorkerTest {
     enum class SyncResult { SUCCESS, RETRY }
 
     @Test
-    fun `201 response deletes completion from dao`() = runTest {
-        // Arrange
+    fun `successful response deletes completion from dao`() = runTest {
         coEvery {
             mockApiService.postCompletion(any(), any())
-        } returns Response.success(
-            com.somi.home.today.CompletionResponse("c1", "2026-03-12T10:00:00Z")
-        )
+        } returns CompletionResponse("c1", "2026-03-12T10:00:00Z")
 
-        // Act
         val result = syncItem(testEntity)
 
-        // Assert
         assertEquals(SyncResult.SUCCESS, result)
-        coVerify { mockDao.delete("test-id-1") }
+        coVerify { mockDao.delete(testEntity) }
     }
 
     @Test
     fun `409 response deletes completion (idempotent success)`() = runTest {
-        // Arrange
         coEvery {
             mockApiService.postCompletion(any(), any())
-        } returns Response.error(409, "Conflict".toResponseBody())
+        } throws retrofit2.HttpException(
+            Response.error<CompletionResponse>(409, "Conflict".toResponseBody())
+        )
 
-        // Act
         val result = syncItem(testEntity)
 
-        // Assert
         assertEquals(SyncResult.SUCCESS, result)
-        coVerify { mockDao.delete("test-id-1") }
+        coVerify { mockDao.delete(testEntity) }
     }
 
     @Test
     fun `400 response deletes completion (permanent failure)`() = runTest {
-        // Arrange
         coEvery {
             mockApiService.postCompletion(any(), any())
-        } returns Response.error(400, "Bad Request".toResponseBody())
+        } throws retrofit2.HttpException(
+            Response.error<CompletionResponse>(400, "Bad Request".toResponseBody())
+        )
 
-        // Act
         val result = syncItem(testEntity)
 
-        // Assert
         assertEquals(SyncResult.SUCCESS, result)
-        coVerify { mockDao.delete("test-id-1") }
+        coVerify { mockDao.delete(testEntity) }
     }
 
     @Test
     fun `5xx response increments attempts and returns retry`() = runTest {
-        // Arrange
         coEvery {
             mockApiService.postCompletion(any(), any())
-        } returns Response.error(503, "Service Unavailable".toResponseBody())
+        } throws retrofit2.HttpException(
+            Response.error<CompletionResponse>(503, "Service Unavailable".toResponseBody())
+        )
 
-        // Act
         val result = syncItem(testEntity)
 
-        // Assert
         assertEquals(SyncResult.RETRY, result)
         coVerify { mockDao.incrementAttempts("test-id-1") }
     }
 
     @Test
     fun `IOException increments attempts and returns retry`() = runTest {
-        // Arrange
         coEvery {
             mockApiService.postCompletion(any(), any())
         } throws IOException("Connection reset")
 
-        // Act
         val result = syncItem(testEntity)
 
-        // Assert
         assertEquals(SyncResult.RETRY, result)
         coVerify { mockDao.incrementAttempts("test-id-1") }
     }

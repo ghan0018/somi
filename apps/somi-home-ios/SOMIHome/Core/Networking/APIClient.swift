@@ -49,7 +49,7 @@ actor APIClient {
     // MARK: - Internal request pipeline
 
     private func performRequest(_ endpoint: Endpoint, retry: Bool) async throws -> Data {
-        let request = try buildRequest(endpoint)
+        let request = try await buildRequest(endpoint)
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: request)
@@ -72,7 +72,7 @@ actor APIClient {
         case 200...299:
             return data
         case 401:
-            if retry {
+            if retry && !endpoint.path.contains("/auth/") {
                 _ = try await refreshTokensDeduped()
                 return try await performRequest(endpoint, retry: false)
             }
@@ -89,7 +89,7 @@ actor APIClient {
         }
     }
 
-    private func buildRequest(_ endpoint: Endpoint) throws -> URLRequest {
+    private func buildRequest(_ endpoint: Endpoint) async throws -> URLRequest {
         var urlString = baseURL + endpoint.path
         if !endpoint.queryParams.isEmpty {
             let queryItems = endpoint.queryParams.map { URLQueryItem(name: $0.key, value: $0.value) }

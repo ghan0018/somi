@@ -6,6 +6,7 @@ import { loadAndAuthorizePatient } from '../services/patient.service.js';
 import {
   getTodayView,
   recordCompletion,
+  deleteCompletion,
   listCompletions,
   getPatientIdByUserId,
 } from '../services/completion.service.js';
@@ -189,6 +190,49 @@ const listCompletionsHandler: RequestHandler = async (req, res, next) => {
 // Mount routes
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// DELETE /me/completions
+// Remove a previously recorded completion (undo / uncheck). Client-only.
+// ---------------------------------------------------------------------------
+
+const deleteCompletionHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const userId = req.userId!;
+
+    const { dateLocal, occurrence, exerciseVersionId } = req.body as {
+      dateLocal?: string;
+      occurrence?: number;
+      exerciseVersionId?: string;
+    };
+
+    if (!dateLocal) throw badRequest('dateLocal is required');
+    if (occurrence === undefined || occurrence === null) throw badRequest('occurrence is required');
+    if (!exerciseVersionId) throw badRequest('exerciseVersionId is required');
+
+    const patientId = await getPatientIdByUserId(userId);
+
+    await deleteCompletion({
+      patientId,
+      dateLocal,
+      occurrence: Number(occurrence),
+      exerciseVersionId,
+    });
+
+    logger.info('Completion deleted via API', {
+      correlationId: req.correlationId,
+      userId,
+      patientId,
+      dateLocal,
+      occurrence,
+      exerciseVersionId,
+    });
+
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Client routes
 completionRouter.get(
   '/me/today',
@@ -202,6 +246,13 @@ completionRouter.post(
   authenticate,
   authorize('client'),
   recordCompletionHandler,
+);
+
+completionRouter.delete(
+  '/me/completions',
+  authenticate,
+  authorize('client'),
+  deleteCompletionHandler,
 );
 
 // Therapist/admin route

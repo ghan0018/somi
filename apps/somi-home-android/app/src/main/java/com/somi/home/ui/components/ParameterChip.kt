@@ -46,11 +46,11 @@ fun ParameterChipsRow(params: ExerciseParams, modifier: Modifier = Modifier) {
     }
 }
 
-fun effectiveParams(defaultParams: ExerciseParams, paramsOverride: ExerciseParams?): ExerciseParams {
-    if (paramsOverride == null) return defaultParams
+fun effectiveParams(defaultParams: ExerciseParams?, paramsOverride: ExerciseParams?): ExerciseParams {
+    if (paramsOverride == null) return defaultParams ?: ExerciseParams(null, null, null)
     return ExerciseParams(
-        reps = paramsOverride.reps ?: defaultParams.reps,
-        sets = paramsOverride.sets ?: defaultParams.sets,
-        seconds = paramsOverride.seconds ?: defaultParams.seconds
+        reps = paramsOverride.reps ?: defaultParams?.reps,
+        sets = paramsOverride.sets ?: defaultParams?.sets,
+        seconds = paramsOverride.seconds ?: defaultParams?.seconds
     )
 }

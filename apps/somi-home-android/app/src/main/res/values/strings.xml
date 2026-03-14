@@ -19,4 +19,5 @@
     <string name="completed">Completed ✓</string>
     <string name="message_hint">Message your therapist…</string>
     <string name="no_exercises_today">No exercises scheduled for today</string>
+    <string name="tab_profile">Profile</string>
 </resources>

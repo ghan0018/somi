@@ -62,7 +62,7 @@ class PendingCompletionDaoTest {
         // Act
         dao.insert(entity1)
         dao.insert(entity2)
-        val all = dao.getAllPending()
+        val all = dao.getAll()
 
         // Assert
         assertEquals(2, all.size)
@@ -75,13 +75,14 @@ class PendingCompletionDaoTest {
         // Arrange
         val entity = makeEntity(id = "id-to-delete")
         dao.insert(entity)
-        assertEquals(1, dao.getAllPending().size)
+        assertEquals(1, dao.getAll().size)
 
         // Act
-        dao.delete("id-to-delete")
+        val entityToDelete = dao.getAll().first { it.id == "id-to-delete" }
+        dao.delete(entityToDelete)
 
         // Assert
-        assertTrue(dao.getAllPending().isEmpty())
+        assertTrue(dao.getAll().isEmpty())
     }
 
     @Test
@@ -95,7 +96,7 @@ class PendingCompletionDaoTest {
         dao.incrementAttempts("id-retry")
 
         // Assert
-        val updated = dao.getAllPending().first { it.id == "id-retry" }
+        val updated = dao.getAll().first { it.id == "id-retry" }
         assertEquals(2, updated.syncAttempts)
     }
 
@@ -115,7 +116,8 @@ class PendingCompletionDaoTest {
         assertEquals(3, countAfterInsert)
 
         // Act — delete one
-        dao.delete("id-2")
+        val entityToDelete2 = dao.getAll().first { it.id == "id-2" }
+        dao.delete(entityToDelete2)
 
         // Assert
         val countAfterDelete = dao.getPendingCount().first()

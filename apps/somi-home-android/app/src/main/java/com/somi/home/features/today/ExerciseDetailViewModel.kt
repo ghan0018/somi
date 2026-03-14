@@ -10,9 +10,9 @@ import com.somi.home.core.database.PendingCompletionEntity
 import com.somi.home.core.models.CompletionRequest
 import com.somi.home.core.models.ExerciseParams
 import com.somi.home.core.models.TodayAssignment
+import com.somi.home.core.models.UncompletionRequest
 import com.somi.home.core.network.ApiService
 import com.somi.home.core.sync.CompletionSyncWorker
-import com.somi.home.ui.components.effectiveParams
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,10 +31,14 @@ sealed class ExerciseDetailUiState {
         val description: String,
         val params: ExerciseParams,
         val mediaId: String?,
+        val videoUrl: String?,
         val isAllComplete: Boolean,
+        /** Whether this exercise has been completed for the current session round. */
+        val isCompleteForCurrentOccurrence: Boolean,
         val completedCount: Int,
         val totalCount: Int,
-        val nextOccurrence: Int?,
+        /** Session-level current round: first occurrence where not all exercises are done. */
+        val currentOccurrence: Int,
         val exerciseVersionId: String,
         val sessionKey: String,
         val assignmentKey: String
@@ -69,15 +73,28 @@ class ExerciseDetailViewModel @Inject constructor(
                 val dateLocal = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
                 val todayData = apiService.getToday(dateLocal)
 
-                val session = todayData.sessions.find { it.sessionKey == sessionKey }
-                val assignment = session?.assignments?.find { it.assignmentKey == assignmentKey }
+                val assignment = todayData.assignments.find { it.assignmentKey == assignmentKey }
 
-                if (session == null || assignment == null) {
+                if (assignment == null) {
                     _uiState.value = ExerciseDetailUiState.Error("Exercise not found")
                     return@launch
                 }
 
-                updateUiFromAssignment(assignment, session.timesPerDay)
+                updateUiFromAssignment(assignment, todayData.timesPerDay, todayData.assignments)
+
+                // Fetch video URL in the background after showing the exercise
+                val mediaId = assignment.exercise.mediaId
+                if (mediaId != null) {
+                    try {
+                        val videoAccess = apiService.getVideoAccess(mediaId)
+                        val current = _uiState.value
+                        if (current is ExerciseDetailUiState.Success) {
+                            _uiState.value = current.copy(videoUrl = videoAccess.accessUrl)
+                        }
+                    } catch (_: Exception) {
+                        // Video URL failure is non-fatal — exercise still usable
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.value = ExerciseDetailUiState.Error(
                     e.message ?: "Failed to load exercise"
@@ -86,22 +103,33 @@ class ExerciseDetailViewModel @Inject constructor(
         }
     }
 
-    fun markComplete() {
+    /**
+     * Toggle complete/incomplete for the current session occurrence.
+     * Matches iOS behavior: button works in both directions for the active round.
+     */
+    fun toggleComplete() {
         val currentState = _uiState.value
         if (currentState !is ExerciseDetailUiState.Success) return
-        val occurrence = currentState.nextOccurrence ?: return
+
+        if (currentState.isCompleteForCurrentOccurrence) {
+            markIncomplete(currentState)
+        } else {
+            markComplete(currentState)
+        }
+    }
+
+    private fun markComplete(currentState: ExerciseDetailUiState.Success) {
+        val occurrence = currentState.currentOccurrence
+        val newCompletedCount = currentState.completedCount + 1
+
+        _uiState.value = currentState.copy(
+            isCompleteForCurrentOccurrence = true,
+            completedCount = newCompletedCount,
+            isAllComplete = newCompletedCount >= currentState.totalCount
+        )
 
         val dateLocal = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
         val idempotencyKey = UUID.randomUUID().toString()
-
-        // Optimistic update
-        val newCompletedCount = currentState.completedCount + 1
-        val newNextOccurrence = if (newCompletedCount >= currentState.totalCount) null else occurrence + 1
-        _uiState.value = currentState.copy(
-            completedCount = newCompletedCount,
-            isAllComplete = newCompletedCount >= currentState.totalCount,
-            nextOccurrence = newNextOccurrence
-        )
 
         viewModelScope.launch(Dispatchers.IO) {
             if (connectivityObserver.isCurrentlyOnline()) {
@@ -116,8 +144,7 @@ class ExerciseDetailViewModel @Inject constructor(
                         )
                     )
                 } catch (_: Exception) {
-                    // Revert on failure
-                    _uiState.value = currentState
+                    _uiState.value = currentState // revert on failure
                 }
             } else {
                 dao.insert(
@@ -136,23 +163,74 @@ class ExerciseDetailViewModel @Inject constructor(
         }
     }
 
-    private fun updateUiFromAssignment(assignment: TodayAssignment, timesPerDay: Int) {
-        val params = effectiveParams(assignment.exercise.defaultParams, assignment.paramsOverride)
-        val completedOccurrences = assignment.completions.map { it.occurrence }.toSet()
-        val nextOccurrence = (1..timesPerDay).firstOrNull { it !in completedOccurrences }
+    private fun markIncomplete(currentState: ExerciseDetailUiState.Success) {
+        val occurrence = currentState.currentOccurrence
+        val newCompletedCount = (currentState.completedCount - 1).coerceAtLeast(0)
+
+        _uiState.value = currentState.copy(
+            isCompleteForCurrentOccurrence = false,
+            completedCount = newCompletedCount,
+            isAllComplete = false
+        )
+
+        val dateLocal = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            if (connectivityObserver.isCurrentlyOnline()) {
+                try {
+                    apiService.deleteCompletion(
+                        UncompletionRequest(
+                            dateLocal = dateLocal,
+                            occurrence = occurrence,
+                            exerciseVersionId = currentState.exerciseVersionId
+                        )
+                    )
+                } catch (_: Exception) {
+                    _uiState.value = currentState // revert on failure
+                }
+            }
+        }
+    }
+
+    private fun updateUiFromAssignment(
+        assignment: TodayAssignment,
+        timesPerDay: Int,
+        allAssignments: List<TodayAssignment>
+    ) {
+        val params = assignment.effectiveParams ?: ExerciseParams(null, null, null)
+        val completedOccurrences = assignment.completions.filter { it.completed }.map { it.occurrence }.toSet()
+
+        // Session-level current occurrence: first round where not all exercises are done
+        val currentSessionOccurrence = computeCurrentOccurrence(allAssignments, timesPerDay)
+        val isCompleteForCurrentOccurrence = completedOccurrences.contains(currentSessionOccurrence)
 
         _uiState.value = ExerciseDetailUiState.Success(
             title = assignment.exercise.title,
             description = assignment.exercise.description,
             params = params,
             mediaId = assignment.exercise.mediaId,
+            videoUrl = null, // fetched asynchronously after this
             isAllComplete = completedOccurrences.size >= timesPerDay,
+            isCompleteForCurrentOccurrence = isCompleteForCurrentOccurrence,
             completedCount = completedOccurrences.size,
             totalCount = timesPerDay,
-            nextOccurrence = nextOccurrence,
+            currentOccurrence = currentSessionOccurrence,
             exerciseVersionId = assignment.exerciseVersionId,
             sessionKey = sessionKey,
             assignmentKey = assignment.assignmentKey
         )
+    }
+
+    /**
+     * Session-level current occurrence: the first round where not all exercises have completed it.
+     */
+    private fun computeCurrentOccurrence(allAssignments: List<TodayAssignment>, timesPerDay: Int): Int {
+        for (round in 1..timesPerDay) {
+            val allDone = allAssignments.all { a ->
+                a.completions.any { it.occurrence == round && it.completed }
+            }
+            if (!allDone) return round
+        }
+        return timesPerDay
     }
 }

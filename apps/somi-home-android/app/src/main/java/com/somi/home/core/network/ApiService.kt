@@ -2,6 +2,7 @@ package com.somi.home.core.network
 
 import com.somi.home.core.models.CompletionRequest
 import com.somi.home.core.models.CompletionResponse
+import com.somi.home.core.models.UncompletionRequest
 import com.somi.home.core.models.LoginResponse
 import com.somi.home.core.models.MeResponse
 import com.somi.home.core.models.Message
@@ -16,6 +17,7 @@ import com.somi.home.core.models.VideoAccessResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -43,6 +45,10 @@ interface ApiService {
         @Header("Idempotency-Key") idempotencyKey: String,
         @Body body: CompletionRequest
     ): CompletionResponse
+
+    // Retrofit @DELETE doesn't support a body; use @HTTP with hasBody = true
+    @HTTP(method = "DELETE", path = "v1/me/completions", hasBody = true)
+    suspend fun deleteCompletion(@Body body: UncompletionRequest)
 
     @GET("v1/me/plan")
     suspend fun getPlan(): Response<TreatmentPlan>

@@ -3,6 +3,7 @@ package com.somi.home.auth
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -26,72 +27,54 @@ class TokenManagerTest {
 
     @Test
     fun `storeTokens saves both tokens`() {
-        // Act
         store.storeTokens("access-abc", "refresh-xyz")
-
-        // Assert
         assertEquals("access-abc", store.getAccessToken())
         assertEquals("refresh-xyz", store.getRefreshToken())
     }
 
     @Test
     fun `getAccessToken returns null when not stored`() {
-        // Assert
         assertNull(store.getAccessToken())
     }
 
     @Test
     fun `getRefreshToken returns null when not stored`() {
-        // Assert
         assertNull(store.getRefreshToken())
     }
 
     @Test
     fun `clearTokens removes both tokens`() {
-        // Arrange
         store.storeTokens("access-abc", "refresh-xyz")
-
-        // Act
         store.clearTokens()
-
-        // Assert
         assertNull(store.getAccessToken())
         assertNull(store.getRefreshToken())
     }
 
     @Test
     fun `storeTokens overwrites previous tokens`() {
-        // Arrange
         store.storeTokens("old-access", "old-refresh")
-
-        // Act
         store.storeTokens("new-access", "new-refresh")
-
-        // Assert
         assertEquals("new-access", store.getAccessToken())
         assertEquals("new-refresh", store.getRefreshToken())
     }
 
     @Test
     fun `withRefreshLock prevents concurrent refresh calls`() = runTest {
-        // Arrange
         val concurrentEntries = AtomicInteger(0)
         val maxConcurrent = AtomicInteger(0)
 
-        // Act — launch multiple concurrent refresh attempts
         val results = (1..5).map {
             async {
                 store.withRefreshLock {
                     val current = concurrentEntries.incrementAndGet()
                     maxConcurrent.updateAndGet { max -> maxOf(max, current) }
-                    delay(50) // Simulate network call
+                    delay(50)
                     concurrentEntries.decrementAndGet()
                     "refreshed"
                 }
             }
         }.awaitAll()
 
-        // Assert — only one at a time should enter the lock
         assertEquals(1, maxConcurrent.get())
         assertEquals(5, results.size)
         results.forEach { assertEquals("refreshed", it) }

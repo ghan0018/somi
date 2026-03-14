@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject private var authManager: AuthManager
+
     var body: some View {
         TabView {
             TodayView()
@@ -16,6 +18,11 @@ struct MainTabView: View {
             MessagesView()
                 .tabItem {
                     Label("Messages", systemImage: "message.fill")
+                }
+
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.circle")
                 }
         }
         .tint(.somiTeal)

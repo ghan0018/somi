@@ -17,6 +17,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/\"")
+        testInstrumentationRunner = "com.somi.home.HiltTestRunner"
     }
 
     buildFeatures {
@@ -55,6 +56,8 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.workmanager)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     implementation(libs.security.crypto)
@@ -65,4 +68,14 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.coroutines.test)
     androidTestImplementation(libs.room.testing)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
+    androidTestImplementation(libs.hilt.android.testing)
+    kspAndroidTest(libs.hilt.compiler)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    // Force Espresso 3.7.0 to fix InputManager.getInstance() incompatibility with API 36
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation("androidx.test.espresso:espresso-idling-resource:3.7.0")
 }

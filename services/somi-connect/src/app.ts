@@ -7,6 +7,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { rootRouter } from './routes/index.js';
+import { testRouter } from './routes/test.routes.js';
 
 export function createApp(): express.Application {
   const app = express();
@@ -44,6 +45,13 @@ export function createApp(): express.Application {
   // Routes
   // ---------------------------------------------------------------------------
   app.use(rootRouter);
+
+  // ---------------------------------------------------------------------------
+  // Test-only routes (never mounted in production)
+  // ---------------------------------------------------------------------------
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/test', testRouter);
+  }
 
   // ---------------------------------------------------------------------------
   // Fallthrough handlers (must come last)

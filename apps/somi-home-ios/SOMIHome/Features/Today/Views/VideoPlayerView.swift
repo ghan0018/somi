@@ -2,26 +2,41 @@ import SwiftUI
 import AVKit
 import Network
 
+// MARK: - VideoPlayerView
+
 struct VideoPlayerView: View {
     let mediaId: String
 
-    @State private var accessUrl: String?
-    @State private var isOffline = false
-    @State private var isLoadingUrl = true
     @State private var player: AVPlayer?
+    @State private var isOffline = false
+    @State private var hasError = false
+    /// Tracks whether the user has started playback. Once true, the play button
+    /// overlay is dismissed and native AVKit controls take over.
+    @State private var hasStartedPlayback = false
 
     var body: some View {
-        Group {
+        ZStack {
+            Color.black
+
             if isOffline {
                 offlineView
-            } else if let player {
-                VideoPlayer(player: player)
-            } else if isLoadingUrl {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.opacity(0.05))
-            } else {
+            } else if hasError {
                 errorView
+            } else if let player {
+                NativeVideoPlayer(player: player)
+                // Show a persistent play button until the user taps — this
+                // ensures the player looks interactive without requiring a tap
+                // just to reveal the controls.
+                if !hasStartedPlayback {
+                    playButtonOverlay {
+                        player.play()
+                        hasStartedPlayback = true
+                    }
+                }
+            } else {
+                // Fetching signed URL
+                ProgressView()
+                    .tint(.white)
             }
         }
         .task {
@@ -29,34 +44,50 @@ struct VideoPlayerView: View {
         }
     }
 
+    // MARK: - Sub-views
+
+    private func playButtonOverlay(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(.black.opacity(0.5))
+                    .frame(width: 64, height: 64)
+                Image(systemName: "play.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.white)
+                    .offset(x: 3) // optical center for play triangle
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private var offlineView: some View {
         VStack(spacing: 8) {
             Image(systemName: "wifi.slash")
                 .font(.title2)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
             Text("Video unavailable offline")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.gray.opacity(0.1))
     }
 
     private var errorView: some View {
         VStack(spacing: 8) {
             Image(systemName: "play.slash")
                 .font(.title2)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
             Text("Unable to load video")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.gray.opacity(0.1))
     }
 
+    // MARK: - Loading
+
     private func loadVideoUrl() async {
-        // Quick connectivity check
         let pathMonitor = NWPathMonitor()
         let connected = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             pathMonitor.pathUpdateHandler = { path in
@@ -68,7 +99,6 @@ struct VideoPlayerView: View {
 
         guard connected else {
             isOffline = true
-            isLoadingUrl = false
             return
         }
 
@@ -76,16 +106,35 @@ struct VideoPlayerView: View {
             let response: VideoAccessResponse = try await APIClient.shared.fetch(
                 Endpoint.accessUpload(uploadId: mediaId)
             )
-            accessUrl = response.accessUrl
             if let url = URL(string: response.accessUrl) {
                 player = AVPlayer(url: url)
+            } else {
+                hasError = true
             }
         } catch APIError.networkUnavailable {
             isOffline = true
         } catch {
-            // leave accessUrl nil, show error
+            hasError = true
         }
+    }
+}
 
-        isLoadingUrl = false
+// MARK: - NativeVideoPlayer (AVPlayerViewController wrapper)
+
+/// Wraps AVPlayerViewController so we get native playback controls (play/pause,
+/// scrubber, AirPlay) and the built-in fullscreen button out of the box.
+struct NativeVideoPlayer: UIViewControllerRepresentable {
+    let player: AVPlayer
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let vc = AVPlayerViewController()
+        vc.player = player
+        vc.showsPlaybackControls = true
+        vc.videoGravity = .resizeAspect
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        uiViewController.player = player
     }
 }

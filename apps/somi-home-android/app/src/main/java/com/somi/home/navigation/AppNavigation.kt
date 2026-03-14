@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -32,6 +33,7 @@ import com.somi.home.core.auth.AuthState
 import com.somi.home.features.auth.LoginScreen
 import com.somi.home.features.messages.MessagesScreen
 import com.somi.home.features.plan.PlanScreen
+import com.somi.home.features.profile.ProfileScreen
 import com.somi.home.features.today.ExerciseDetailScreen
 import com.somi.home.features.today.TodayScreen
 import com.somi.home.ui.theme.SomiTeal
@@ -65,7 +67,8 @@ fun MainScaffold() {
     val bottomNavItems = listOf(
         BottomNavItem(NavRoutes.TODAY, R.string.tab_today, Icons.Default.Today),
         BottomNavItem(NavRoutes.PLAN, R.string.tab_plan, Icons.Default.CalendarMonth),
-        BottomNavItem(NavRoutes.MESSAGES, R.string.tab_messages, Icons.Default.ChatBubbleOutline)
+        BottomNavItem(NavRoutes.MESSAGES, R.string.tab_messages, Icons.Default.ChatBubbleOutline),
+        BottomNavItem(NavRoutes.PROFILE, R.string.tab_profile, Icons.Default.Person)
     )
 
     // Only show bottom bar for top-level destinations
@@ -122,12 +125,9 @@ fun MainScaffold() {
             ) {
                 ExerciseDetailScreen(onBack = { navController.popBackStack() })
             }
-            composable(NavRoutes.PLAN) {
-                PlanScreen()
-            }
-            composable(NavRoutes.MESSAGES) {
-                MessagesScreen()
-            }
+            composable(NavRoutes.PLAN) { PlanScreen() }
+            composable(NavRoutes.MESSAGES) { MessagesScreen() }
+            composable(NavRoutes.PROFILE) { ProfileScreen() }
         }
     }
 }

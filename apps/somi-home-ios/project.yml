@@ -40,3 +40,45 @@ targets:
         UILaunchStoryboardName: ""
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIStatusBarStyle: UIStatusBarStyleLightContent
+  SOMIHomeTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SOMIHomeTests
+    settings:
+      base:
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SOMIHome.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SOMIHome"
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.somi.home.tests
+    dependencies:
+      - target: SOMIHome
+  SOMIHomeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SOMIHomeUITests
+        createIntermediateGroups: true
+    dependencies:
+      - target: SOMIHome
+    settings:
+      base:
+        TEST_TARGET_NAME: SOMIHome
+        BUNDLE_LOADER: ""
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.somi.home.uitests
+schemes:
+  SOMIHome:
+    build:
+      targets:
+        SOMIHome: all
+        SOMIHomeTests: [test]
+        SOMIHomeUITests: [test]
+    test:
+      targets:
+        - SOMIHomeTests
+        - SOMIHomeUITests

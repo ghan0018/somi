@@ -3,39 +3,32 @@ import SwiftUI
 struct ExerciseDetailView: View {
     let assignment: TodayAssignment
     let timesPerDay: Int
-    let sessionKey: String
     @ObservedObject var viewModel: TodayViewModel
 
-    private var params: ExerciseParams {
-        effectiveParams(assignment: assignment)
-    }
+    private var params: ExerciseParams { assignment.effectiveParams }
+    private var currentOccurrence: Int { viewModel.currentOccurrence }
 
-    private var nextOccurrence: Int? {
-        for occ in 1...timesPerDay {
-            if !assignment.completions.contains(where: { $0.occurrence == occ }) {
-                return occ
-            }
-        }
-        return nil
-    }
-
-    private var allComplete: Bool {
-        nextOccurrence == nil
+    private var isComplete: Bool {
+        assignment.completions
+            .first(where: { $0.occurrence == currentOccurrence })?.completed == true
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Title
-                Text(assignment.exercise.title)
+                Text(assignment.exercise?.title ?? "Exercise")
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(.somiNavy)
+                    .accessibilityIdentifier("exercise_title")
 
                 // Description
-                Text(assignment.exercise.description)
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                if let description = assignment.exercise?.description {
+                    Text(description)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
 
                 // Parameter chips
                 HStack(spacing: 12) {
@@ -51,64 +44,49 @@ struct ExerciseDetailView: View {
                 }
 
                 // Video
-                if let mediaId = assignment.exercise.mediaId {
+                if let mediaId = assignment.exercise?.mediaId {
                     VideoPlayerView(mediaId: mediaId)
                         .frame(height: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                // Completion status
-                HStack(spacing: 8) {
-                    ForEach(1...timesPerDay, id: \.self) { occurrence in
-                        let isCompleted = assignment.completions.contains { $0.occurrence == occurrence }
-                        ZStack {
-                            Circle()
-                                .fill(isCompleted ? Color.somiTeal : Color.gray.opacity(0.15))
-                                .frame(width: 36, height: 36)
-                            if isCompleted {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
-                            } else {
-                                Text("\(occurrence)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-
                 Spacer(minLength: 16)
 
-                // Mark Complete button
+                // Mark Complete / Undo button
                 Button {
-                    guard let occ = nextOccurrence else { return }
                     Task {
-                        await viewModel.markComplete(
-                            assignmentKey: assignment.assignmentKey,
-                            exerciseVersionId: assignment.exerciseVersionId,
-                            occurrence: occ,
-                            sessionKey: sessionKey
-                        )
+                        if isComplete {
+                            await viewModel.markIncomplete(
+                                assignmentKey: assignment.assignmentKey,
+                                exerciseVersionId: assignment.exerciseVersionId,
+                                occurrence: currentOccurrence
+                            )
+                        } else {
+                            await viewModel.markComplete(
+                                assignmentKey: assignment.assignmentKey,
+                                exerciseVersionId: assignment.exerciseVersionId,
+                                occurrence: currentOccurrence
+                            )
+                        }
                     }
                 } label: {
                     HStack {
-                        if allComplete {
+                        if isComplete {
                             Image(systemName: "checkmark.circle.fill")
-                            Text("Completed")
+                            Text("Completed — Tap to Undo")
                         } else {
                             Text("Mark Complete")
                         }
                     }
                 }
                 .buttonStyle(SOMIPrimaryButtonStyle())
-                .disabled(allComplete)
-                .opacity(allComplete ? 0.6 : 1.0)
+                .opacity(isComplete ? 0.7 : 1.0)
+                .accessibilityIdentifier("mark_complete_button")
             }
             .padding(20)
         }
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color.somiMint.ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
     }
 
     @ViewBuilder
@@ -121,10 +99,7 @@ struct ExerciseDetailView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(
-            Capsule()
-                .fill(Color.somiTeal.opacity(0.12))
-        )
+        .background(Capsule().fill(Color.somiTeal.opacity(0.12)))
         .foregroundColor(.somiDarkTeal)
     }
 }

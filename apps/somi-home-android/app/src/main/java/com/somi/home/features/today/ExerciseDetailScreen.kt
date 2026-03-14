@@ -1,7 +1,11 @@
 package com.somi.home.features.today
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +25,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,7 +36,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -50,10 +56,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.somi.home.R
-import com.somi.home.core.network.ApiService
 import com.somi.home.ui.components.LoadingSkeleton
 import com.somi.home.ui.components.ParameterChipsRow
-import com.somi.home.ui.theme.SomiMint
 import com.somi.home.ui.theme.SomiTeal
 
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +68,52 @@ fun ExerciseDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    var isVideoFullscreen by remember { mutableStateOf(false) }
+
+    // Sync orientation on every recomposition — avoids disposal ordering races
+    SideEffect {
+        (context as? Activity)?.requestedOrientation = if (isVideoFullscreen)
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        else
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
+
+    // Restore unspecified orientation when leaving this screen entirely
+    DisposableEffect(Unit) {
+        onDispose {
+            (context as? Activity)?.requestedOrientation =
+                ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    // Back press in fullscreen exits fullscreen instead of navigating back
+    BackHandler(enabled = isVideoFullscreen) {
+        isVideoFullscreen = false
+    }
+
+    // Full-screen video overlay — covers the entire window including top bar
+    if (isVideoFullscreen) {
+        val videoUrl = (uiState as? ExerciseDetailUiState.Success)?.videoUrl
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            VideoPlayerComposable(
+                videoUrl = videoUrl,
+                isOnline = isOnline,
+                isFullscreen = true,
+                // ExoPlayer's new PlayerView starts in "not fullscreen" internally, so any
+                // button tap in this overlay should always exit fullscreen
+                onToggleFullscreen = { isVideoFullscreen = false },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -77,16 +127,12 @@ fun ExerciseDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
     ) { padding ->
         when (val state = uiState) {
-            is ExerciseDetailUiState.Loading -> {
-                LoadingSkeleton(modifier = Modifier.padding(padding))
-            }
+            is ExerciseDetailUiState.Loading -> LoadingSkeleton(modifier = Modifier.padding(padding))
 
             is ExerciseDetailUiState.Error -> {
                 Column(
@@ -112,11 +158,12 @@ fun ExerciseDetailScreen(
                         .padding(padding)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Video player
                     if (state.mediaId != null) {
                         VideoPlayerComposable(
-                            mediaId = state.mediaId,
+                            videoUrl = state.videoUrl,
                             isOnline = isOnline,
+                            isFullscreen = false,
+                            onToggleFullscreen = { isVideoFullscreen = it },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(16f / 9f)
@@ -151,25 +198,31 @@ fun ExerciseDetailScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Button(
-                            onClick = { viewModel.markComplete() },
+                            onClick = { viewModel.toggleComplete() },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
-                            enabled = !state.isAllComplete,
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = SomiTeal,
-                                disabledContainerColor = SomiTeal.copy(alpha = 0.3f)
+                                containerColor = if (state.isCompleteForCurrentOccurrence)
+                                    SomiTeal.copy(alpha = 0.7f)
+                                else
+                                    SomiTeal
                             )
                         ) {
-                            if (state.isAllComplete) {
+                            if (state.isCompleteForCurrentOccurrence) {
                                 Icon(
                                     Icons.Filled.CheckCircle,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(20.dp),
+                                    tint = Color.White
                                 )
                                 Spacer(modifier = Modifier.size(8.dp))
-                                Text(stringResource(R.string.completed), color = Color.White)
+                                Text(
+                                    text = "Completed \u2014 Tap to Undo",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium
+                                )
                             } else {
                                 Text(stringResource(R.string.mark_complete), color = Color.White)
                             }
@@ -184,17 +237,14 @@ fun ExerciseDetailScreen(
 @OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayerComposable(
-    mediaId: String,
+    videoUrl: String?,
     isOnline: Boolean,
+    isFullscreen: Boolean = false,
+    onToggleFullscreen: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (!isOnline) {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
                     imageVector = Icons.Default.WifiOff,
@@ -213,72 +263,43 @@ fun VideoPlayerComposable(
         return
     }
 
-    val context = LocalContext.current
-    // We need the ApiService to get the video access URL
-    // In a real app this would use a shared ViewModel or repository
-    // For now we use a remember + LaunchedEffect pattern with Hilt
-    val apiService = remember {
-        // Access via the Hilt entry point in production; for simplicity we use the ViewModel's reference
-        // This composable is always called from ExerciseDetailScreen which has the ViewModel
-        null as ApiService?
+    if (videoUrl == null) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = SomiTeal, modifier = Modifier.size(32.dp))
+        }
+        return
     }
 
-    var accessUrl by remember { mutableStateOf<String?>(null) }
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    val context = LocalContext.current
 
-    // For video access, we'll use a simple approach: the ViewModel passes the URL
-    // But since the spec calls for ApiService directly, we do it inline here
-    // In practice, the parent ViewModel would provide the URL
-    LaunchedEffect(mediaId) {
-        try {
-            // The ApiService would be injected properly; using a CompositionLocal or ViewModel is preferred
-            // For now, we'll create the player when accessUrl becomes available
-        } catch (_: Exception) {
-            // Handle error silently — video not available
+    DisposableEffect(videoUrl) {
+        val exoPlayer = ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(videoUrl))
+            prepare()
+        }
+        player = exoPlayer
+        onDispose {
+            exoPlayer.release()
+            player = null
         }
     }
 
-    // ExoPlayer composable
-    if (accessUrl != null) {
-        DisposableEffect(accessUrl) {
-            val exoPlayer = ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(accessUrl!!))
-                prepare()
-            }
-            player = exoPlayer
-
-            onDispose {
-                exoPlayer.release()
-                player = null
-            }
-        }
-
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    this.player = player
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
+    AndroidView(
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                this.player = player
+                useController = true
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                setFullscreenButtonClickListener { enterFullscreen ->
+                    onToggleFullscreen(enterFullscreen)
                 }
-            },
-            modifier = modifier,
-            update = { view ->
-                view.player = player
             }
-        )
-    } else {
-        // Placeholder while loading video URL
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Loading video...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-        }
-    }
+        },
+        modifier = modifier,
+        update = { view -> view.player = player }
+    )
 }

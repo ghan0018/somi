@@ -28,6 +28,7 @@ final class PlanViewModelTests: XCTestCase {
                     sessionKey: "s1",
                     index: 0,
                     title: "Morning Routine",
+                    sessionNotes: nil,
                     timesPerDay: 2,
                     assignments: [
                         PlanAssignment(
@@ -37,8 +38,8 @@ final class PlanViewModelTests: XCTestCase {
                             exercise: ExerciseInfo(
                                 title: "Tongue Sweep",
                                 description: "Sweep your tongue across the palate.",
-                                defaultParams: ExerciseParams(reps: 10, sets: 2, seconds: nil),
-                                mediaId: nil
+                                mediaId: nil,
+                                defaultParams: ExerciseParams(reps: 10, sets: 2, seconds: nil)
                             ),
                             paramsOverride: ExerciseParams(reps: 15, sets: nil, seconds: nil)
                         )

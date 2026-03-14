@@ -8,7 +8,7 @@ protocol APIClientProtocol {
     func fetchVoid(_ endpoint: Endpoint) async throws
 }
 
-final class MockAPIClient: APIClientProtocol {
+private final class MockAuthAPIClient: APIClientProtocol {
     var fetchHandler: ((Endpoint) async throws -> Any)?
     var fetchVoidHandler: ((Endpoint) async throws -> Void)?
     var fetchCallCount = 0
@@ -63,12 +63,12 @@ final class MockKeychainManager {
 @MainActor
 final class AuthManagerTests: XCTestCase {
 
-    private var mockAPI: MockAPIClient!
+    private var mockAPI: MockAuthAPIClient!
     private var mockKeychain: MockKeychainManager!
 
     override func setUp() {
         super.setUp()
-        mockAPI = MockAPIClient()
+        mockAPI = MockAuthAPIClient()
         mockKeychain = MockKeychainManager()
     }
 

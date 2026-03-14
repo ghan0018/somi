@@ -32,34 +32,33 @@ struct RefreshResponse: Codable {
 }
 
 // MARK: - Today View
+// Flat single-session response from GET /v1/me/today.
+// effectiveParams are merged server-side; completions pre-populated for each occurrence.
 
 struct TodayViewResponse: Codable {
-    let planId: String
     let dateLocal: String
-    let sessions: [TodaySession]
-}
-
-struct TodaySession: Codable {
     let sessionKey: String
-    let title: String?
+    let sessionTitle: String?
+    let sessionNotes: String?
     let timesPerDay: Int
-    let assignments: [TodayAssignment]
+    var assignments: [TodayAssignment]
+    let overallCompletionRate: Double
 }
 
 struct TodayAssignment: Codable, Identifiable {
     var id: String { assignmentKey }
     let assignmentKey: String
     let exerciseVersionId: String
-    let exercise: ExerciseInfo
-    let paramsOverride: ExerciseParams?
-    let completions: [CompletionEntry]
+    let exercise: ExerciseInfo?
+    let effectiveParams: ExerciseParams
+    var completions: [CompletionEntry]
 }
 
 struct ExerciseInfo: Codable {
     let title: String
     let description: String
-    let defaultParams: ExerciseParams
     let mediaId: String?
+    let defaultParams: ExerciseParams?  // Present in Plan API; nil in Today API (params are pre-merged into effectiveParams)
 }
 
 struct ExerciseParams: Codable {
@@ -70,7 +69,8 @@ struct ExerciseParams: Codable {
 
 struct CompletionEntry: Codable {
     let occurrence: Int
-    let completedAt: String
+    let completed: Bool
+    let completedAt: String?
 }
 
 // MARK: - Treatment Plan
@@ -87,6 +87,7 @@ struct PlanSession: Codable, Identifiable {
     let sessionKey: String
     let index: Int
     let title: String?
+    let sessionNotes: String?
     let timesPerDay: Int
     let assignments: [PlanAssignment]
 }
