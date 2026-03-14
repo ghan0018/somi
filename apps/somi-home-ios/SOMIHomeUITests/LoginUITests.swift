@@ -29,6 +29,22 @@ final class LoginUITests: XCTestCase {
         app = nil
     }
 
+    // MARK: - Failure screenshots
+
+    /// Capture a screenshot at the exact moment any assertion fails.
+    /// The attachment is stored in the xcresult bundle; the CI workflow
+    /// extracts and uploads it as a PNG artifact for remote debugging.
+    override func record(_ issue: XCTIssue) {
+        if app != nil {
+            let screenshot = app.screenshot()
+            let attachment = XCTAttachment(screenshot: screenshot)
+            attachment.name = "Failure — \(name)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        super.record(issue)
+    }
+
     // MARK: - Tests
 
     func testLogin_withValidCredentials_navigatesToTodayTab() throws {
@@ -55,7 +71,8 @@ final class LoginUITests: XCTestCase {
         // List renders as collectionView in iOS 16+; use descendants to be type-agnostic.
         let exerciseList = app.descendants(matching: .any).matching(identifier: "today_exercise_list").firstMatch
         XCTAssertTrue(
-            exerciseList.waitForExistence(timeout: 10),
+            // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
+            exerciseList.waitForExistence(timeout: 40),
             "Today exercise list should be visible after successful login"
         )
     }

@@ -37,6 +37,22 @@ final class TodayViewUITests: XCTestCase {
         app = nil
     }
 
+    // MARK: - Failure screenshots
+
+    /// Capture a screenshot at the exact moment any assertion fails.
+    /// The attachment is stored in the xcresult bundle; the CI workflow
+    /// extracts and uploads it as a PNG artifact for remote debugging.
+    override func record(_ issue: XCTIssue) {
+        if let app {
+            let screenshot = app.screenshot()
+            let attachment = XCTAttachment(screenshot: screenshot)
+            attachment.name = "Failure — \(name)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        super.record(issue)
+    }
+
     // MARK: - Tests
 
     func testTodayView_displaysExercises() throws {
@@ -91,34 +107,27 @@ final class TodayViewUITests: XCTestCase {
         // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
         XCTAssertTrue(exerciseList.waitForExistence(timeout: 40))
 
-        // Wait for at least one completion circle before counting.
-        // Use descendants(matching: .any) — Button(.plain) loses the button
-        // accessibility trait and won't appear in app.buttons queries.
-        let circleQuery = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH 'completion_circle_'")
-        )
-        let firstCircle = circleQuery.firstMatch
-        guard firstCircle.waitForExistence(timeout: 10) else {
-            XCTFail("No completion circles found — check backend reset scenario")
-            return
-        }
-
-        // Tap every completion circle to finish the first round.
+        // Tap each completion circle by its known accessibility identifier.
+        //
+        // IMPORTANT — do NOT use circleQuery.count to drive the loop.  SwiftUI
+        // List renders cells incrementally; on a slow CI host the second cell
+        // may not yet be in the accessibility tree when we snapshot the count
+        // (even though firstMatch already returned true for the first cell).
+        // Snapshotting count=1 causes the loop to run only once, so only one
+        // completion reaches the backend and the congrats modal never fires.
+        //
+        // Waiting for each circle by its stable identifier (seeded by the reset
+        // endpoint as asgn_01 / asgn_02) guarantees every element is rendered
+        // and stable before we tap it.
+        //
         // Use coordinate-based tap to bypass isHittable check — the button uses
         // Color.clear with contentShape, which XCUITest may report as not hittable
         // even though the coordinate is valid and tappable.
-        //
-        // IMPORTANT: wait for each circle BEFORE tapping (not after).  The
-        // optimistic update after a tap triggers a SwiftUI re-render; during
-        // that window the accessibility tree can be briefly inconsistent, so
-        // a synchronous .exists check on the next element may return false.
-        // Using waitForExistence(timeout:) before each tap lets XCUITest poll
-        // until the element is stable, eliminating the race.
-        let count = circleQuery.count
-        for i in 0..<count {
-            let circle = circleQuery.element(boundBy: i)
+        for key in ["asgn_01", "asgn_02"] {
+            let circle = app.descendants(matching: .any)
+                .matching(identifier: "completion_circle_\(key)").firstMatch
             guard circle.waitForExistence(timeout: 15) else {
-                XCTFail("Completion circle at index \(i) did not appear within 15s")
+                XCTFail("completion_circle_\(key) did not appear within 15s")
                 return
             }
             circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
@@ -147,32 +156,27 @@ final class TodayViewUITests: XCTestCase {
         // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
         XCTAssertTrue(exerciseList.waitForExistence(timeout: 40))
 
-        // Wait for and complete all exercises.
-        // Use descendants(matching: .any) — Button(.plain) may not appear in app.buttons.
-        let circleQuery = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH 'completion_circle_'")
-        )
-        let firstCircle = circleQuery.firstMatch
-        guard firstCircle.waitForExistence(timeout: 10) else {
-            XCTFail("No completion circles found — check backend reset scenario")
-            return
-        }
-
+        // Tap each completion circle by its known accessibility identifier.
+        //
+        // IMPORTANT — do NOT use circleQuery.count to drive the loop.  SwiftUI
+        // List renders cells incrementally; on a slow CI host the second cell
+        // may not yet be in the accessibility tree when we snapshot the count
+        // (even though firstMatch already returned true for the first cell).
+        // Snapshotting count=1 causes the loop to run only once, so only one
+        // completion reaches the backend and the all-done view never appears.
+        //
+        // Waiting for each circle by its stable identifier (seeded by the reset
+        // endpoint as asgn_01 / asgn_02) guarantees every element is rendered
+        // and stable before we tap it.
+        //
         // Use coordinate-based tap to bypass isHittable check — the button uses
         // Color.clear with contentShape, which XCUITest may report as not hittable
         // even though the coordinate is valid and tappable.
-        //
-        // IMPORTANT: wait for each circle BEFORE tapping (not after).  The
-        // optimistic update after a tap triggers a SwiftUI re-render; during
-        // that window the accessibility tree can be briefly inconsistent, so
-        // a synchronous .exists check on the next element may return false.
-        // Using waitForExistence(timeout:) before each tap lets XCUITest poll
-        // until the element is stable, eliminating the race.
-        let count = circleQuery.count
-        for i in 0..<count {
-            let circle = circleQuery.element(boundBy: i)
+        for key in ["asgn_01", "asgn_02"] {
+            let circle = app.descendants(matching: .any)
+                .matching(identifier: "completion_circle_\(key)").firstMatch
             guard circle.waitForExistence(timeout: 15) else {
-                XCTFail("Completion circle at index \(i) did not appear within 15s")
+                XCTFail("completion_circle_\(key) did not appear within 15s")
                 return
             }
             circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
