@@ -41,7 +41,6 @@ const TaxonomySchema = new Schema<ITaxonomyDoc>(
 
 TaxonomySchema.index({ category: 1, label: 1 }, { unique: true });
 
-export const TaxonomyModel: Model<ITaxonomyDoc> = mongoose.model<ITaxonomyDoc>(
-  'Taxonomy',
-  TaxonomySchema,
-);
+export const TaxonomyModel: Model<ITaxonomyDoc> =
+  (mongoose.models['Taxonomy'] as Model<ITaxonomyDoc>) ??
+  mongoose.model<ITaxonomyDoc>('Taxonomy', TaxonomySchema);

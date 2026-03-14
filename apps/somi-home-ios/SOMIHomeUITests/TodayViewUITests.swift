@@ -42,7 +42,8 @@ final class TodayViewUITests: XCTestCase {
     func testTodayView_displaysExercises() throws {
         let exerciseList = app.descendants(matching: .any).matching(identifier: "today_exercise_list").firstMatch
         XCTAssertTrue(
-            exerciseList.waitForExistence(timeout: 10),
+            // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
+            exerciseList.waitForExistence(timeout: 40),
             "Today exercise list should be visible after login"
         )
         // At least one exercise row should exist.
@@ -52,14 +53,15 @@ final class TodayViewUITests: XCTestCase {
             NSPredicate(format: "identifier BEGINSWITH 'exercise_row_'")
         ).firstMatch
         XCTAssertTrue(
-            firstRow.waitForExistence(timeout: 5),
+            firstRow.waitForExistence(timeout: 10),
             "At least one exercise row should be displayed"
         )
     }
 
     func testMarkComplete_showsCheckmark() throws {
         let exerciseList = app.descendants(matching: .any).matching(identifier: "today_exercise_list").firstMatch
-        XCTAssertTrue(exerciseList.waitForExistence(timeout: 10))
+        // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
+        XCTAssertTrue(exerciseList.waitForExistence(timeout: 40))
 
         // Find the first completion circle and tap it.
         // Use descendants(matching: .any) — Button(.plain) loses the button
@@ -68,7 +70,7 @@ final class TodayViewUITests: XCTestCase {
             NSPredicate(format: "identifier BEGINSWITH 'completion_circle_'")
         ).firstMatch
         XCTAssertTrue(
-            completionCircle.waitForExistence(timeout: 5),
+            completionCircle.waitForExistence(timeout: 10),
             "Completion circle button should be present"
         )
 
@@ -86,7 +88,8 @@ final class TodayViewUITests: XCTestCase {
 
     func testCongratsModal_appearsOnRoundCompletion() throws {
         let exerciseList = app.descendants(matching: .any).matching(identifier: "today_exercise_list").firstMatch
-        XCTAssertTrue(exerciseList.waitForExistence(timeout: 10))
+        // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
+        XCTAssertTrue(exerciseList.waitForExistence(timeout: 40))
 
         // Wait for at least one completion circle before counting.
         // Use descendants(matching: .any) — Button(.plain) loses the button
@@ -95,7 +98,7 @@ final class TodayViewUITests: XCTestCase {
             NSPredicate(format: "identifier BEGINSWITH 'completion_circle_'")
         )
         let firstCircle = circleQuery.firstMatch
-        guard firstCircle.waitForExistence(timeout: 5) else {
+        guard firstCircle.waitForExistence(timeout: 10) else {
             XCTFail("No completion circles found — check backend reset scenario")
             return
         }
@@ -119,7 +122,7 @@ final class TodayViewUITests: XCTestCase {
         // Sheet content may appear as any element type; use descendants.
         let congratsModal = app.descendants(matching: .any).matching(identifier: "congrats_modal").firstMatch
         XCTAssertTrue(
-            congratsModal.waitForExistence(timeout: 8),
+            congratsModal.waitForExistence(timeout: 20),
             "Congrats modal should appear after completing a round (when more rounds remain)"
         )
     }
@@ -134,7 +137,8 @@ final class TodayViewUITests: XCTestCase {
         login(email: "e2e-patient@test.com", password: "TestPassword123!")
 
         let exerciseList = app.descendants(matching: .any).matching(identifier: "today_exercise_list").firstMatch
-        XCTAssertTrue(exerciseList.waitForExistence(timeout: 10))
+        // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
+        XCTAssertTrue(exerciseList.waitForExistence(timeout: 40))
 
         // Wait for and complete all exercises.
         // Use descendants(matching: .any) — Button(.plain) may not appear in app.buttons.
@@ -142,7 +146,7 @@ final class TodayViewUITests: XCTestCase {
             NSPredicate(format: "identifier BEGINSWITH 'completion_circle_'")
         )
         let firstCircle = circleQuery.firstMatch
-        guard firstCircle.waitForExistence(timeout: 5) else {
+        guard firstCircle.waitForExistence(timeout: 10) else {
             XCTFail("No completion circles found — check backend reset scenario")
             return
         }
@@ -164,7 +168,7 @@ final class TodayViewUITests: XCTestCase {
         // use descendants(matching: .any) to be type-agnostic.
         let allDoneView = app.descendants(matching: .any).matching(identifier: "all_done_view").firstMatch
         XCTAssertTrue(
-            allDoneView.waitForExistence(timeout: 8),
+            allDoneView.waitForExistence(timeout: 20),
             "All-done view should appear after completing the final round"
         )
     }
