@@ -77,6 +77,17 @@ jobs:
             | xcpretty --report junit --output TestResults/unit-tests.xml
 
       # ── Stage 2: UI tests (backend required) ─────────────────────────────
+      # iOS Simulator on GitHub Actions CI cannot reach `localhost` because
+      # macOS resolves it to ::1 (IPv6) while Node.js binds to 0.0.0.0
+      # (IPv4 only), causing every TCP connection from the simulator to time
+      # out.  The simulator CAN reach the host via its en0 LAN IP, so we
+      # capture that IP here and pass it as API_BASE_URL to xcodebuild.
+      - name: Get host LAN IP for simulator networking
+        run: |
+          HOST_IP=$(ipconfig getifaddr en0)
+          echo "HOST_IP=$HOST_IP" >> $GITHUB_ENV
+          echo "Simulator will reach backend at http://$HOST_IP:3000"
+
       - name: Start backend (embedded MongoDB)
         env:
           NODE_ENV: development
@@ -109,6 +120,7 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -only-testing SOMIHomeUITests \
             -resultBundlePath TestResults/ui-tests.xcresult \
+            API_BASE_URL="http://$HOST_IP:3000" \
             | xcpretty --report junit --output TestResults/ui-tests.xml
 
       # ── Artifacts ─────────────────────────────────────────────────────────
