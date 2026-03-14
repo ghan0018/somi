@@ -107,14 +107,21 @@ final class TodayViewUITests: XCTestCase {
         // Use coordinate-based tap to bypass isHittable check — the button uses
         // Color.clear with contentShape, which XCUITest may report as not hittable
         // even though the coordinate is valid and tappable.
+        //
+        // IMPORTANT: wait for each circle BEFORE tapping (not after).  The
+        // optimistic update after a tap triggers a SwiftUI re-render; during
+        // that window the accessibility tree can be briefly inconsistent, so
+        // a synchronous .exists check on the next element may return false.
+        // Using waitForExistence(timeout:) before each tap lets XCUITest poll
+        // until the element is stable, eliminating the race.
         let count = circleQuery.count
         for i in 0..<count {
             let circle = circleQuery.element(boundBy: i)
-            if circle.exists {
-                circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-                // Brief wait between taps for state to update
-                _ = circle.waitForExistence(timeout: 1)
+            guard circle.waitForExistence(timeout: 15) else {
+                XCTFail("Completion circle at index \(i) did not appear within 15s")
+                return
             }
+            circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
 
         // The congrats modal should appear after completing all exercises in a round
@@ -154,13 +161,21 @@ final class TodayViewUITests: XCTestCase {
         // Use coordinate-based tap to bypass isHittable check — the button uses
         // Color.clear with contentShape, which XCUITest may report as not hittable
         // even though the coordinate is valid and tappable.
+        //
+        // IMPORTANT: wait for each circle BEFORE tapping (not after).  The
+        // optimistic update after a tap triggers a SwiftUI re-render; during
+        // that window the accessibility tree can be briefly inconsistent, so
+        // a synchronous .exists check on the next element may return false.
+        // Using waitForExistence(timeout:) before each tap lets XCUITest poll
+        // until the element is stable, eliminating the race.
         let count = circleQuery.count
         for i in 0..<count {
             let circle = circleQuery.element(boundBy: i)
-            if circle.exists {
-                circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-                _ = circle.waitForExistence(timeout: 1)
+            guard circle.waitForExistence(timeout: 15) else {
+                XCTFail("Completion circle at index \(i) did not appear within 15s")
+                return
             }
+            circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
 
         // The all-done view should replace the exercise list.

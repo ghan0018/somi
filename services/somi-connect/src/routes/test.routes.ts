@@ -64,21 +64,41 @@ const reset: RequestHandler = async (req, res, next) => {
     }
 
     // -----------------------------------------------------------------------
-    // Wipe existing test patient data (by email, to avoid nuking other users)
+    // Upsert the patient user.
+    //
+    // IMPORTANT: we deliberately REUSE the user document rather than
+    // delete-and-recreate it.  Deleting the user would invalidate any JWT
+    // the test app already holds, causing a DocumentNotFoundError race
+    // when the app relaunches mid-test while a concurrent setUp reset is
+    // also running (the new user gets deleted before the login completes).
+    // Keeping the same _id means existing tokens stay structurally valid;
+    // the app's --uitesting signOut() call will clear them on relaunch anyway.
     // -----------------------------------------------------------------------
-    const existingUser = await UserModel.findOne({ email: patientEmail });
-    if (existingUser) {
+    const passwordHash = await hashPassword(patientPassword);
+    let patientUser = await UserModel.findOne({ email: patientEmail });
+
+    if (patientUser) {
+      // Wipe plan/completion data tied to the existing patient profile
       const existingPatient = await PatientProfileModel.findOne({
-        userId: existingUser._id.toString(),
+        userId: patientUser._id.toString(),
       });
       if (existingPatient) {
         const patientIdStr = existingPatient._id.toString();
-        // Wipe completions and plans tied to this patient
         await CompletionEventModel.deleteMany({ patientId: patientIdStr });
         await TreatmentPlanModel.deleteMany({ patientId: patientIdStr });
         await PatientProfileModel.deleteOne({ _id: existingPatient._id });
       }
-      await UserModel.deleteOne({ _id: existingUser._id });
+      // Refresh password hash so test credentials are always current
+      patientUser.passwordHash = passwordHash;
+      await patientUser.save();
+    } else {
+      patientUser = await UserModel.create({
+        email: patientEmail,
+        passwordHash,
+        role: 'client',
+        status: 'active',
+        mfaEnabled: false,
+      });
     }
 
     // Wipe any leftover test exercises created by prior resets (keyed by title)
@@ -105,17 +125,6 @@ const reset: RequestHandler = async (req, res, next) => {
     }
     const seederAdminId = seederAdmin._id.toString();
 
-    // -----------------------------------------------------------------------
-    // Create patient user
-    // -----------------------------------------------------------------------
-    const passwordHash = await hashPassword(patientPassword);
-    const patientUser = await UserModel.create({
-      email: patientEmail,
-      passwordHash,
-      role: 'client',
-      status: 'active',
-      mfaEnabled: false,
-    });
     const patientUserId = patientUser._id.toString();
 
     // Generate access token
