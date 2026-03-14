@@ -22,6 +22,15 @@
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Allow plain HTTP to localhost so the app can reach the dev/e2e
+		     backend (http://localhost:3000) in Simulator without ATS blocking
+		     the connection. Production traffic goes to HTTPS endpoints and is
+		     unaffected by this exception. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>SOMI Home uses your camera to record practice videos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
