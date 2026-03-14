@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Button,
   Input,
@@ -17,10 +17,12 @@ import type { Patient, UpdatePatientParams } from '../types';
 import PageHeader from '../components/PageHeader';
 import StatusTag from '../components/StatusTag';
 import FormModal from '../components/FormModal';
+import PlanTab from '../components/PlanTab';
 
 export default function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -95,9 +97,17 @@ export default function PatientDetailPage() {
     </Descriptions>
   ) : null;
 
+  // Allow navigating back to a specific tab (e.g. from plan builder)
+  const defaultTab =
+    (location.state as Record<string, string> | null)?.activeTab || 'general';
+
   const tabItems = [
     { key: 'general', label: 'General', children: generalTab },
-    { key: 'plan', label: 'Plan', children: <p>Treatment plan coming soon.</p> },
+    {
+      key: 'plan',
+      label: 'Plan',
+      children: patientId ? <PlanTab patientId={patientId} /> : null,
+    },
     { key: 'progress', label: 'Progress', children: <p>Progress tracking coming soon.</p> },
     { key: 'messages', label: 'Messages', children: <p>Messages coming soon.</p> },
     { key: 'notes', label: 'Notes', children: <p>Notes coming soon.</p> },
@@ -140,7 +150,7 @@ export default function PatientDetailPage() {
         }
       />
 
-      <Tabs defaultActiveKey="general" items={tabItems} />
+      <Tabs defaultActiveKey={defaultTab} items={tabItems} />
 
       <FormModal
         title="Edit Patient"

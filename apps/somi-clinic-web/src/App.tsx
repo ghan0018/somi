@@ -10,6 +10,7 @@ import PatientDetailPage from './pages/PatientDetailPage';
 import ExerciseListPage from './pages/ExerciseListPage';
 import ExerciseFormPage from './pages/ExerciseFormPage';
 import ExerciseDetailPage from './pages/ExerciseDetailPage';
+import PlanBuilderPage from './pages/PlanBuilderPage';
 import InboxPage from './pages/InboxPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminTaxonomyPage from './pages/AdminTaxonomyPage';
@@ -27,6 +28,8 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/patients" replace />} />
                 <Route path="/patients" element={<PatientListPage />} />
                 <Route path="/patients/:patientId" element={<PatientDetailPage />} />
+                <Route path="/patients/:patientId/plan/new" element={<PlanBuilderPage />} />
+                <Route path="/patients/:patientId/plan/:planId/edit" element={<PlanBuilderPage />} />
                 <Route path="/exercises" element={<ExerciseListPage />} />
                 <Route path="/exercises/new" element={<ExerciseFormPage />} />
                 <Route path="/exercises/:exerciseId" element={<ExerciseDetailPage />} />

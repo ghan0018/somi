@@ -18,8 +18,7 @@ export interface ISession {
   sessionKey: string;
   index: number;
   title?: string;
-  /** PHI — must never be returned to clients */
-  notesForTherapistOnly?: string;
+  sessionNotes?: string;
   timesPerDay: number;
   assignments: IAssignment[];
 }
@@ -29,6 +28,7 @@ export interface ITreatmentPlan {
   patientId: string;
   status: 'draft' | 'published' | 'archived';
   remindersEnabled: boolean;
+  activeSessionIndex: number;
   publishedAt?: Date;
   publishedBy?: string;
   sessions: ISession[];
@@ -65,7 +65,7 @@ const SessionSchema = new Schema<ISession>(
     sessionKey: { type: String, required: true },
     index: { type: Number, required: true, min: 0 },
     title: { type: String, trim: true },
-    notesForTherapistOnly: { type: String },
+    sessionNotes: { type: String },
     timesPerDay: {
       type: Number,
       required: true,
@@ -98,6 +98,12 @@ const TreatmentPlanSchema = new Schema<ITreatmentPlanDoc>(
       type: Boolean,
       required: true,
       default: false,
+    },
+    activeSessionIndex: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
     },
     publishedAt: {
       type: Date,

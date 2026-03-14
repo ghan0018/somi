@@ -83,6 +83,39 @@ When working as an agent team, respect these boundaries to avoid file conflicts:
 
 Architect must NOT write test files. QA Engineer must NOT write implementation code. This prevents merge conflicts.
 
+## Acceptance Testing Patterns
+
+When building features, proactively check for these common gaps BEFORE the user does acceptance testing:
+
+### Empty states
+- Every data-fetching component must handle: loading, empty (no data), error, and populated states
+- Backend 404 for "not found" is different from "no data yet" — frontend must distinguish both
+- Write tests for each state
+
+### Form UX
+- Input labels must be permanently visible (not placeholder-only) — use labels above inputs
+- If a resource has media (video/image), provide inline preview capabilities in any builder/editor UI
+- Number inputs should always show their unit (reps, sets, seconds, etc.)
+
+### Data reuse
+- Don't globally exclude items that should be reusable in different contexts (e.g., exercises across sessions)
+- Scope exclusion lists to the narrowest applicable context
+
+### Discoverability
+- Features with non-obvious behavior need tooltips or help text (e.g., reminders toggle)
+- New/unfamiliar UI patterns need onboarding affordances
+
+### Workflow completeness
+- If a resource has status transitions (draft → published → archived), consider:
+  - Can each status be reached from every other relevant status? (e.g., published → draft for editing)
+  - What is the "current" state indicator? (e.g., active session in a multi-session plan)
+  - Can the user advance/progress through stages?
+- Trace the full lifecycle: create → edit → publish → modify → archive → recreate
+
+### Requirements cross-check
+- Before marking a feature complete, re-read the requirements docs in `requirements/` and verify every capability is implemented
+- Check for implied features: if a plan has sessions, there must be a way to track which session is active
+
 ## Build & Run
 
 ```bash

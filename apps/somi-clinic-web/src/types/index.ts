@@ -136,13 +136,19 @@ export interface Assignment {
     seconds?: number;
   };
   exercise?: ExerciseVersion;
+  /** Merged defaults + overrides — returned by the enrichPlan endpoint */
+  effectiveParams?: {
+    reps?: number;
+    sets?: number;
+    seconds?: number;
+  };
 }
 
 export interface Session {
   sessionKey: string;
   index: number;
   title?: string;
-  notesForTherapistOnly?: string;
+  sessionNotes?: string;
   timesPerDay: 1 | 2 | 3;
   assignments: Assignment[];
 }
@@ -152,11 +158,32 @@ export interface TreatmentPlan {
   patientId: string;
   status: 'draft' | 'published' | 'archived';
   remindersEnabled: boolean;
+  activeSessionIndex?: number;
   publishedAt?: string;
   publishedBy?: string;
   sessions: Session[];
   createdAt: string;
   updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Plan Input Types (used when creating/updating plans)
+// ---------------------------------------------------------------------------
+
+export interface AssignmentInput {
+  exerciseId: string;
+  paramsOverride?: {
+    reps?: number;
+    sets?: number;
+    seconds?: number;
+  };
+}
+
+export interface SessionInput {
+  title?: string;
+  sessionNotes?: string;
+  timesPerDay: number;
+  assignments: AssignmentInput[];
 }
 
 // ============================================================================
