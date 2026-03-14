@@ -10,7 +10,7 @@ export const clientPlanRouter = Router();
 // ---------------------------------------------------------------------------
 // GET /me/plan
 // Get the authenticated client's published treatment plan.
-// Strips notesForTherapistOnly — never returned to clients.
+// Returns the published plan for the authenticated client.
 // ---------------------------------------------------------------------------
 const getMyPlanHandler: RequestHandler = async (req, res, next) => {
   try {

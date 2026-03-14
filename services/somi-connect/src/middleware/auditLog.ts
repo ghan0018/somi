@@ -17,6 +17,8 @@ export type AuditAction =
   | 'plan.update'
   | 'plan.publish'
   | 'plan.archive'
+  | 'plan.advance_session'
+  | 'plan.revert_to_draft'
   | 'completion.read'
   | 'completion.create'
   | 'adherence.read'
@@ -108,8 +110,13 @@ export function auditMiddleware(
       if (res.statusCode >= 200 && res.statusCode < 400) {
         const patientId =
           req.params[options?.patientIdParam ?? 'patientId'] ?? undefined;
-        const resourceId =
-          req.params[options?.resourceIdParam ?? ''] ?? undefined;
+
+        // Derive resourceId from the specified param, falling back to
+        // patientId for patient-scoped reads that don't target a specific
+        // sub-resource (e.g. adherence, timeline, plan list).
+        const resourceId = options?.resourceIdParam
+          ? req.params[options.resourceIdParam] ?? patientId
+          : patientId;
 
         createAuditEvent(req, {
           actionType,

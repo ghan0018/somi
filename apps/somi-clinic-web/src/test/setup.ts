@@ -1,6 +1,49 @@
 import '@testing-library/jest-dom';
 
 // ---------------------------------------------------------------------------
+// Suppress known JSDOM warnings that are not actionable.
+//
+// 1. "Not implemented: Window's getComputedStyle() method: with pseudo-elements"
+//    — JSDOM does not support getComputedStyle with pseudo-element selectors.
+//    Ant Design's animation/CSS system triggers this frequently.
+//
+// 2. "Could not parse CSS stylesheet"
+//    — JSDOM's CSS parser doesn't support newer CSS features such as :where(),
+//    @layer, etc. used by Ant Design's stylesheets.
+//
+// Neither of these affect test correctness.
+// ---------------------------------------------------------------------------
+const _originalConsoleError = console.error;
+const _originalConsoleWarn = console.warn;
+
+const SUPPRESSED_PATTERNS = [
+  // JSDOM limitations — not fixable in application code
+  /Not implemented: Window's getComputedStyle/,
+  /Could not parse CSS stylesheet/,
+  // Ant Design's ResizableTextArea computes NaN height in JSDOM.
+  // React passes format strings: console.error('Warning: `%s` is ...', 'NaN', 'height')
+  /invalid value for the .* css style property/,
+  // React Router v6 informational warnings about v7 migration flags
+  /React Router Future Flag Warning/,
+];
+
+function isSuppressed(args: unknown[]): boolean {
+  if (args.length === 0) return false;
+  // React sometimes passes warnings as format strings: console.error('Warning: %s', msg)
+  // so we need to check all arguments, not just the first one.
+  const combined = args.map((a) => (typeof a === 'string' ? a : String(a))).join(' ');
+  return SUPPRESSED_PATTERNS.some((re) => re.test(combined));
+}
+
+console.error = (...args: unknown[]) => {
+  if (!isSuppressed(args)) _originalConsoleError(...args);
+};
+
+console.warn = (...args: unknown[]) => {
+  if (!isSuppressed(args)) _originalConsoleWarn(...args);
+};
+
+// ---------------------------------------------------------------------------
 // Configurable viewport width for responsive testing.
 //
 // Set the VIEWPORT_WIDTH env var to run the entire test suite at a different

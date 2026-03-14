@@ -223,12 +223,12 @@ export default function ExerciseDetailPage() {
       {/* Details Section */}
       <div style={{ marginTop: 16 }}>
       <SectionCard title="Details">
-        <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
-          <Descriptions.Item label="Description" span={2}>
+        <Descriptions column={1} bordered size="small">
+          <Descriptions.Item label="Description">
             {exercise.description || '—'}
           </Descriptions.Item>
 
-          <Descriptions.Item label="Tags" span={2}>
+          <Descriptions.Item label="Tags">
             {exercise.tags?.length ? (
               <Space size={4} wrap>
                 {exercise.tags.map((tag) => {
@@ -255,7 +255,7 @@ export default function ExerciseDetailPage() {
             )}
           </Descriptions.Item>
 
-          <Descriptions.Item label="Default Parameters" span={2}>
+          <Descriptions.Item label="Default Parameters">
             {paramParts.length > 0 ? paramParts.join(', ') : '—'}
           </Descriptions.Item>
 

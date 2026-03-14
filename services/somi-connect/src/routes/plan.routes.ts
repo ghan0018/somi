@@ -9,6 +9,8 @@ import {
   replacePlan,
   publishPlan,
   archivePlan,
+  advanceSession,
+  revertToDraft,
   updatePlanSettings,
   getTherapistPlan,
   getPlanById,
@@ -212,7 +214,7 @@ const updatePlanSettingsHandler: RequestHandler = async (req, res, next) => {
 
 // ---------------------------------------------------------------------------
 // GET /:patientId/plan
-// Get the patient's current plan for therapist view (includes PHI notes).
+// Get the patient's current plan for therapist view.
 // ---------------------------------------------------------------------------
 const getTherapistPlanHandler: RequestHandler = async (req, res, next) => {
   try {
@@ -231,6 +233,76 @@ const getTherapistPlanHandler: RequestHandler = async (req, res, next) => {
       correlationId: req.correlationId,
       userId: req.userId,
       patientId,
+    });
+
+    res.status(200).json(plan);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// POST /:patientId/plan/:planId/advance-session
+// Advance the active session index by one (published plans only).
+// ---------------------------------------------------------------------------
+const advanceSessionHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const { patientId, planId } = req.params;
+
+    await loadAndAuthorizePatient(patientId, req.userId!, req.role as 'therapist' | 'admin');
+
+    // Verify the plan belongs to this patient
+    await getPlanById(planId, patientId);
+
+    const plan = await advanceSession(planId);
+
+    await createAuditEvent(req, {
+      actionType: 'plan.advance_session',
+      resourceType: 'treatment_plan',
+      resourceId: planId,
+      patientId,
+    });
+
+    logger.info('Treatment plan session advanced via API', {
+      correlationId: req.correlationId,
+      userId: req.userId,
+      patientId,
+      planId,
+    });
+
+    res.status(200).json(plan);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// POST /:patientId/plan/:planId/revert-to-draft
+// Revert a published plan back to draft status so it can be edited.
+// ---------------------------------------------------------------------------
+const revertToDraftHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const { patientId, planId } = req.params;
+
+    await loadAndAuthorizePatient(patientId, req.userId!, req.role as 'therapist' | 'admin');
+
+    // Verify the plan belongs to this patient
+    await getPlanById(planId, patientId);
+
+    const plan = await revertToDraft(planId);
+
+    await createAuditEvent(req, {
+      actionType: 'plan.revert_to_draft',
+      resourceType: 'treatment_plan',
+      resourceId: planId,
+      patientId,
+    });
+
+    logger.info('Treatment plan reverted to draft via API', {
+      correlationId: req.correlationId,
+      userId: req.userId,
+      patientId,
+      planId,
     });
 
     res.status(200).json(plan);
@@ -265,6 +337,18 @@ planRouter.post(
   '/:patientId/plan/:planId/archive',
   ...auth,
   archivePlanHandler,
+);
+
+planRouter.post(
+  '/:patientId/plan/:planId/advance-session',
+  ...auth,
+  advanceSessionHandler,
+);
+
+planRouter.post(
+  '/:patientId/plan/:planId/revert-to-draft',
+  ...auth,
+  revertToDraftHandler,
 );
 
 planRouter.patch(

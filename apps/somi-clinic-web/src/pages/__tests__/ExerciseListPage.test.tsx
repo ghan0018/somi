@@ -87,6 +87,12 @@ describe('ExerciseListPage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: /exercise library/i })).toBeInTheDocument();
+
+    // Wait for the async effects (taxonomy + exercise fetch) to settle so
+    // React doesn't warn about state updates outside act().
+    await waitFor(() => {
+      expect(mockListExercises).toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------

@@ -31,6 +31,7 @@ export interface ITreatmentPlan {
   patientId: string;
   status: 'draft' | 'published' | 'archived';
   remindersEnabled: boolean;
+  activeSessionIndex: number;
   publishedAt?: Date;
   publishedBy?: string;
   sessions: ISession[];
@@ -101,6 +102,12 @@ const TreatmentPlanSchema = new Schema<ITreatmentPlanDoc>(
       type: Boolean,
       required: true,
       default: false,
+    },
+    activeSessionIndex: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
     },
     publishedAt: {
       type: Date,
