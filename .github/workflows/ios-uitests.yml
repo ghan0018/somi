@@ -132,6 +132,86 @@ jobs:
           path: TestResults/
           retention-days: 14
 
+      # Extract PNG screenshots from the xcresult bundle so they can be
+      # viewed directly on the Actions summary page without downloading
+      # and opening the binary xcresult in Xcode.
+      - name: Export failure screenshots from xcresult
+        if: failure()
+        run: |
+          python3 << 'PYEOF'
+          import json, subprocess, os, sys
+
+          xcresult = "TestResults/ui-tests.xcresult"
+          out_dir  = "TestResults/screenshots"
+          os.makedirs(out_dir, exist_ok=True)
+
+          if not os.path.isdir(xcresult):
+              print("No UI test xcresult found — nothing to export")
+              sys.exit(0)
+
+          # Dump the entire result bundle as JSON.
+          # Xcode 16 requires the `object` sub-command and `--legacy` flag to
+          # use the old JSON format; without them the command exits with code 64.
+          r = subprocess.run(
+              ["xcrun", "xcresulttool", "get", "object", "--legacy",
+               "--path", xcresult, "--format", "json"],
+              capture_output=True, text=True
+          )
+          if r.returncode != 0:
+              print("xcresulttool failed:", r.stderr[:500])
+              sys.exit(0)
+
+          data = json.loads(r.stdout)
+          exported = []
+          seen_ids = set()
+
+          def walk(node):
+              if isinstance(node, dict):
+                  if node.get("_type", {}).get("_name") == "ActionTestAttachment":
+                      ref_id = node.get("payloadRef", {}).get("id", "")
+                      name   = node.get("name", "screenshot")
+                      uti    = node.get("uniformTypeIdentifier", "")
+                      is_img = "image" in uti or "screenshot" in name.lower() or "png" in uti
+                      if ref_id and is_img and ref_id not in seen_ids:
+                          seen_ids.add(ref_id)
+                          safe = name.replace(" ", "_").replace("—", "-").replace("/", "_")[:60]
+                          out  = os.path.join(out_dir, f"{safe}.png")
+                          n = 1
+                          while os.path.exists(out):
+                              out = os.path.join(out_dir, f"{safe}_{n}.png")
+                              n += 1
+                          result = subprocess.run(
+                              ["xcrun", "xcresulttool", "export",
+                               "--path", xcresult,
+                               "--id", ref_id,
+                               "--output-path", out],
+                              capture_output=True
+                          )
+                          if result.returncode == 0:
+                              exported.append(out)
+                              print(f"  Exported: {out}")
+                          else:
+                              print(f"  Skipped {name}: {result.stderr.decode()[:120]}")
+                  for v in node.values():
+                      walk(v)
+              elif isinstance(node, list):
+                  for item in node:
+                      walk(item)
+
+          print(f"Scanning {xcresult} for screenshots...")
+          walk(data)
+          print(f"Done — {len(exported)} screenshot(s) exported to {out_dir}/")
+          PYEOF
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-failure-screenshots-${{ github.run_number }}
+          path: TestResults/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload backend log (on failure)
         uses: actions/upload-artifact@v4
         if: failure()

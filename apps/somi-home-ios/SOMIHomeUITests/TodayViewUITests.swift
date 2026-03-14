@@ -40,17 +40,21 @@ final class TodayViewUITests: XCTestCase {
     // MARK: - Failure screenshots
 
     /// Capture a screenshot at the exact moment any assertion fails.
-    /// The attachment is stored in the xcresult bundle; the CI workflow
-    /// extracts and uploads it as a PNG artifact for remote debugging.
+    /// The attachment is added to the XCTIssue itself so XCTest stores it
+    /// inside the xcresult bundle — `self.add()` outside an activity context
+    /// is silently dropped in Xcode 15+.
     override func record(_ issue: XCTIssue) {
         if let app {
             let screenshot = app.screenshot()
             let attachment = XCTAttachment(screenshot: screenshot)
             attachment.name = "Failure — \(name)"
             attachment.lifetime = .keepAlways
-            add(attachment)
+            var mutableIssue = issue
+            mutableIssue.add(attachment)
+            super.record(mutableIssue)
+        } else {
+            super.record(issue)
         }
-        super.record(issue)
     }
 
     // MARK: - Tests
@@ -131,6 +135,11 @@ final class TodayViewUITests: XCTestCase {
                 return
             }
             circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            // Wait 1s after each tap for the optimistic-update re-render to fully
+            // settle.  Without this, the accessibility tree still reflects the
+            // pre-tap layout when the next coordinate is resolved, so the next
+            // tap lands at a stale screen position and misses the button.
+            Thread.sleep(forTimeInterval: 1.0)
         }
 
         // The congrats modal should appear after completing all exercises in a round
@@ -180,6 +189,11 @@ final class TodayViewUITests: XCTestCase {
                 return
             }
             circle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            // Wait 1s after each tap for the optimistic-update re-render to fully
+            // settle.  Without this, the accessibility tree still reflects the
+            // pre-tap layout when the next coordinate is resolved, so the next
+            // tap lands at a stale screen position and misses the button.
+            Thread.sleep(forTimeInterval: 1.0)
         }
 
         // The all-done view should replace the exercise list.
@@ -202,7 +216,7 @@ final class TodayViewUITests: XCTestCase {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("test-secret-dev", forHTTPHeaderField: "X-Test-Secret")
-        request.timeoutInterval = 10
+        request.timeoutInterval = 30
 
         let body: [String: String] = [
             "scenario": scenario,

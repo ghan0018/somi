@@ -40,9 +40,12 @@ final class LoginUITests: XCTestCase {
             let attachment = XCTAttachment(screenshot: screenshot)
             attachment.name = "Failure — \(name)"
             attachment.lifetime = .keepAlways
-            add(attachment)
+            var mutableIssue = issue
+            mutableIssue.add(attachment)
+            super.record(mutableIssue)
+        } else {
+            super.record(issue)
         }
-        super.record(issue)
     }
 
     // MARK: - Tests
@@ -71,8 +74,8 @@ final class LoginUITests: XCTestCase {
         // List renders as collectionView in iOS 16+; use descendants to be type-agnostic.
         let exerciseList = app.descendants(matching: .any).matching(identifier: "today_exercise_list").firstMatch
         XCTAssertTrue(
-            // CI can be slow: login (~12s) + /me/today (~13s) = up to 25s; allow 40s
-            exerciseList.waitForExistence(timeout: 40),
+            // CI can be slow: login (~14s) + /me/today (~52s cold) = up to 66s; allow 120s
+            exerciseList.waitForExistence(timeout: 120),
             "Today exercise list should be visible after successful login"
         )
     }
@@ -85,7 +88,7 @@ final class LoginUITests: XCTestCase {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("test-secret-dev", forHTTPHeaderField: "X-Test-Secret")
-        request.timeoutInterval = 10
+        request.timeoutInterval = 30
         let body: [String: String] = [
             "scenario": scenario,
             "patientEmail": "e2e-patient@test.com",
