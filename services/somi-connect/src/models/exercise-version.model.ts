@@ -85,4 +85,4 @@ const ExerciseVersionSchema = new Schema<IExerciseVersionDoc>(
 // exerciseId already has index: true on the field definition
 
 export const ExerciseVersionModel: Model<IExerciseVersionDoc> =
-  mongoose.model<IExerciseVersionDoc>('ExerciseVersion', ExerciseVersionSchema);
+  (mongoose.models['ExerciseVersion'] as Model<IExerciseVersionDoc>) ?? mongoose.model<IExerciseVersionDoc>('ExerciseVersion', ExerciseVersionSchema);

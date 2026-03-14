@@ -140,4 +140,4 @@ const TreatmentPlanSchema = new Schema<ITreatmentPlanDoc>(
 TreatmentPlanSchema.index({ patientId: 1, status: 1 });
 
 export const TreatmentPlanModel: Model<ITreatmentPlanDoc> =
-  mongoose.model<ITreatmentPlanDoc>('TreatmentPlan', TreatmentPlanSchema);
+  (mongoose.models['TreatmentPlan'] as Model<ITreatmentPlanDoc>) ?? mongoose.model<ITreatmentPlanDoc>('TreatmentPlan', TreatmentPlanSchema);

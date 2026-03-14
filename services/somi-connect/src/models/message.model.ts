@@ -73,4 +73,4 @@ const MessageSchema = new Schema<IMessageDoc>(
 
 MessageSchema.index({ threadId: 1, createdAt: 1 });
 
-export const MessageModel: Model<IMessageDoc> = mongoose.model<IMessageDoc>('Message', MessageSchema);
+export const MessageModel: Model<IMessageDoc> = (mongoose.models['Message'] as Model<IMessageDoc>) ?? mongoose.model<IMessageDoc>('Message', MessageSchema);

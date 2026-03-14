@@ -85,4 +85,4 @@ CompletionEventSchema.index({ patientId: 1, dateLocal: 1 });
 CompletionEventSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 export const CompletionEventModel: Model<ICompletionEventDoc> =
-  mongoose.model<ICompletionEventDoc>('CompletionEvent', CompletionEventSchema);
+  (mongoose.models['CompletionEvent'] as Model<ICompletionEventDoc>) ?? mongoose.model<ICompletionEventDoc>('CompletionEvent', CompletionEventSchema);

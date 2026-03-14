@@ -63,4 +63,4 @@ PatientProfileSchema.index({ primaryTherapistId: 1 });
 PatientProfileSchema.index({ status: 1 });
 
 export const PatientProfileModel: Model<IPatientProfileDoc> =
-  mongoose.model<IPatientProfileDoc>('PatientProfile', PatientProfileSchema);
+  (mongoose.models['PatientProfile'] as Model<IPatientProfileDoc>) ?? mongoose.model<IPatientProfileDoc>('PatientProfile', PatientProfileSchema);
