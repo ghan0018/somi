@@ -57,6 +57,13 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty --no-document
 
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: apps/somi-home-ios
+        run: xcodegen generate
+
       # ── Stage 1: Unit tests (no backend) ─────────────────────────────────
       - name: iOS unit tests
         run: |
