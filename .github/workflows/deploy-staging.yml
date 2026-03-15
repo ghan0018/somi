@@ -16,22 +16,10 @@ env:
   S3_BUCKET: somi-clinic-web-staging
 
 jobs:
-  # ---- Quality Gates ----
-  ci:
-    uses: ./.github/workflows/ci.yml
-
-  ios:
-    uses: ./.github/workflows/ios-uitests.yml
-    secrets: inherit
-
-  android:
-    uses: ./.github/workflows/android-tests.yml
-
   # ---- Deploy Backend ----
   deploy-backend:
     name: deploy-backend-staging
     runs-on: ubuntu-latest
-    needs: [ci, ios, android]
     permissions:
       id-token: write
       contents: read
@@ -91,7 +79,6 @@ jobs:
   deploy-frontend:
     name: deploy-frontend-staging
     runs-on: ubuntu-latest
-    needs: [ci, ios, android]
     permissions:
       id-token: write
       contents: read

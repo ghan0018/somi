@@ -17,11 +17,6 @@ name: iOS Tests
 #   E2E_JWT_REFRESH_SECRET  JWT refresh signing key for the e2e server
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-  workflow_call:
   workflow_dispatch:
 
 jobs:

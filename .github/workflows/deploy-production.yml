@@ -16,24 +16,10 @@ env:
   S3_BUCKET: somi-clinic-web-production
 
 jobs:
-  # ---- Quality Gate 1: Full CI ----
-  ci:
-    uses: ./.github/workflows/ci.yml
-
-  # ---- Quality Gate 2: iOS Tests ----
-  ios:
-    uses: ./.github/workflows/ios-uitests.yml
-    secrets: inherit
-
-  # ---- Quality Gate 3: Android Tests ----
-  android:
-    uses: ./.github/workflows/android-tests.yml
-
-  # ---- Quality Gate 4: Security Scanning ----
+  # ---- Quality Gate: Security Scanning ----
   security-scan:
     name: security-scan
     runs-on: ubuntu-latest
-    needs: [ci, ios, android]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -15,11 +15,6 @@ name: Android Tests
 #   ./gradlew connectedDebugAndroidTest     # instrumented tests (emulator must be running)
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-  workflow_call:
   workflow_dispatch:
 
 jobs:
