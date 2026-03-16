@@ -4,9 +4,9 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-HOOKS_DIR="$REPO_ROOT/.git/hooks"
+HOOKS_DIR="$(git rev-parse --git-common-dir)/hooks"
 
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 cp "$REPO_ROOT/scripts/pre-push.sh" "$HOOKS_DIR/pre-push"
 chmod +x "$HOOKS_DIR/pre-push"
 
