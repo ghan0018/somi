@@ -77,7 +77,6 @@ AuditEventSchema.index({ patientId: 1, createdAt: 1 });
 AuditEventSchema.index({ actorUserId: 1 });
 AuditEventSchema.index({ actionType: 1 });
 
-export const AuditEventModel: Model<IAuditEventDoc> = mongoose.model<IAuditEventDoc>(
-  'AuditEvent',
-  AuditEventSchema,
-);
+export const AuditEventModel: Model<IAuditEventDoc> =
+  (mongoose.models['AuditEvent'] as Model<IAuditEventDoc>) ??
+  mongoose.model<IAuditEventDoc>('AuditEvent', AuditEventSchema);

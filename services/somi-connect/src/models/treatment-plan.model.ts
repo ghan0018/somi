@@ -18,7 +18,10 @@ export interface ISession {
   sessionKey: string;
   index: number;
   title?: string;
+  /** Patient-visible notes from the therapist — safe to return to clients */
   sessionNotes?: string;
+  /** PHI — must never be returned to clients */
+  notesForTherapistOnly?: string;
   timesPerDay: number;
   assignments: IAssignment[];
 }
@@ -65,7 +68,8 @@ const SessionSchema = new Schema<ISession>(
     sessionKey: { type: String, required: true },
     index: { type: Number, required: true, min: 0 },
     title: { type: String, trim: true },
-    sessionNotes: { type: String },
+    sessionNotes: { type: String, trim: true },
+    notesForTherapistOnly: { type: String },
     timesPerDay: {
       type: Number,
       required: true,
@@ -136,4 +140,4 @@ const TreatmentPlanSchema = new Schema<ITreatmentPlanDoc>(
 TreatmentPlanSchema.index({ patientId: 1, status: 1 });
 
 export const TreatmentPlanModel: Model<ITreatmentPlanDoc> =
-  mongoose.model<ITreatmentPlanDoc>('TreatmentPlan', TreatmentPlanSchema);
+  (mongoose.models['TreatmentPlan'] as Model<ITreatmentPlanDoc>) ?? mongoose.model<ITreatmentPlanDoc>('TreatmentPlan', TreatmentPlanSchema);

@@ -60,4 +60,4 @@ const NoteSchema = new Schema<INoteDoc>(
 
 NoteSchema.index({ patientId: 1, createdAt: 1 });
 
-export const NoteModel: Model<INoteDoc> = mongoose.model<INoteDoc>('Note', NoteSchema);
+export const NoteModel: Model<INoteDoc> = (mongoose.models['Note'] as Model<INoteDoc>) ?? mongoose.model<INoteDoc>('Note', NoteSchema);

@@ -365,6 +365,43 @@ describe('GET /v1/me/today', () => {
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
+
+  it('returns sessionNotes from the session in today view', async () => {
+    // Re-seed with a plan that has sessionNotes
+    await clearDb();
+    await seedData();
+    await TreatmentPlanModel.create({
+      patientId,
+      status: 'published',
+      publishedAt: new Date(),
+      publishedBy: therapistId,
+      remindersEnabled: false,
+      sessions: [
+        {
+          sessionKey: 'sess_01',
+          index: 0,
+          title: 'Week 1',
+          sessionNotes: 'Breathe through your nose throughout.',
+          timesPerDay: 1,
+          assignments: [
+            {
+              assignmentKey: 'asgn_01',
+              exerciseId: exercise1Id,
+              exerciseVersionId: exercise1VersionId,
+              index: 0,
+            },
+          ],
+        },
+      ],
+    });
+
+    const res = await request(app)
+      .get(`/v1/me/today?dateLocal=${DATE}`)
+      .set('Authorization', `Bearer ${clientToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.sessionNotes).toBe('Breathe through your nose throughout.');
+  });
 });
 
 // ---------------------------------------------------------------------------

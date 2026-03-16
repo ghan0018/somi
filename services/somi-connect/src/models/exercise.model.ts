@@ -43,7 +43,6 @@ const ExerciseSchema = new Schema<IExerciseDoc>(
   },
 );
 
-export const ExerciseModel: Model<IExerciseDoc> = mongoose.model<IExerciseDoc>(
-  'Exercise',
-  ExerciseSchema,
-);
+export const ExerciseModel: Model<IExerciseDoc> =
+  (mongoose.models['Exercise'] as Model<IExerciseDoc>) ??
+  mongoose.model<IExerciseDoc>('Exercise', ExerciseSchema);

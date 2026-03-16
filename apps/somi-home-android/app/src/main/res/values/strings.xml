@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SOMI Home</string>
+    <string name="tab_today">Today</string>
+    <string name="tab_plan">Plan</string>
+    <string name="tab_messages">Messages</string>
+    <string name="login_title">Welcome to SOMI Home</string>
+    <string name="login_email_hint">Email address</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button">Sign In</string>
+    <string name="error_wrong_credentials">Incorrect email or password</string>
+    <string name="error_no_internet">No internet connection. Please try again.</string>
+    <string name="error_not_a_patient">SOMI Home is for patients only. Please use the SOMI Clinic web app.</string>
+    <string name="video_offline_message">Internet connection required to play this video</string>
+    <string name="no_plan_title">Plan Not Yet Available</string>
+    <string name="no_plan_message">Your treatment plan is being set up by your therapist</string>
+    <string name="pending_sync">%d completion(s) pending sync</string>
+    <string name="mark_complete">Mark Complete</string>
+    <string name="completed">Completed ✓</string>
+    <string name="message_hint">Message your therapist…</string>
+    <string name="no_exercises_today">No exercises scheduled for today</string>
+    <string name="tab_profile">Profile</string>
+</resources>

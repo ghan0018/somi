@@ -81,4 +81,4 @@ const UploadSchema = new Schema<IUploadDoc>(
 UploadSchema.index({ patientId: 1 });
 UploadSchema.index({ status: 1 });
 
-export const UploadModel: Model<IUploadDoc> = mongoose.model<IUploadDoc>('Upload', UploadSchema);
+export const UploadModel: Model<IUploadDoc> = (mongoose.models['Upload'] as Model<IUploadDoc>) ?? mongoose.model<IUploadDoc>('Upload', UploadSchema);

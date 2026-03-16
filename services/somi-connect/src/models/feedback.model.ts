@@ -56,7 +56,6 @@ const FeedbackSchema = new Schema<IFeedbackDoc>(
 
 FeedbackSchema.index({ patientId: 1, createdAt: 1 });
 
-export const FeedbackModel: Model<IFeedbackDoc> = mongoose.model<IFeedbackDoc>(
-  'Feedback',
-  FeedbackSchema,
-);
+export const FeedbackModel: Model<IFeedbackDoc> =
+  (mongoose.models['Feedback'] as Model<IFeedbackDoc>) ??
+  mongoose.model<IFeedbackDoc>('Feedback', FeedbackSchema);

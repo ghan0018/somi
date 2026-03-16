@@ -234,6 +234,25 @@ describe('POST /v1/clinic/patients/:patientId/plan', () => {
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('draft');
   });
+
+  it('persists sessionNotes on session and returns it in plan response', async () => {
+    const res = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan`)
+      .set('Authorization', `Bearer ${therapistToken}`)
+      .send({
+        sessions: [
+          {
+            title: 'Week 1',
+            sessionNotes: 'Focus on slow breathing.',
+            timesPerDay: 1,
+            assignments: [{ exerciseId: exercise1Id }],
+          },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.sessions[0].sessionNotes).toBe('Focus on slow breathing.');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -299,6 +318,36 @@ describe('GET /v1/clinic/patients/:patientId/plan', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.sessions[0].sessionNotes).toBe('Patient struggles with this');
+  });
+
+  it('includes sessionNotes in therapist plan view', async () => {
+    // Create a fresh plan with sessionNotes
+    const createRes = await request(app)
+      .post(`/v1/clinic/patients/${patientId}/plan`)
+      .set('Authorization', `Bearer ${therapistToken}`)
+      .send({
+        sessions: [
+          {
+            title: 'Session A',
+            sessionNotes: 'Patient should breathe slowly.',
+            timesPerDay: 1,
+            assignments: [{ exerciseId: exercise1Id }],
+          },
+        ],
+      });
+    expect(createRes.status).toBe(201);
+
+    const res = await request(app)
+      .get(`/v1/clinic/patients/${patientId}/plan`)
+      .set('Authorization', `Bearer ${therapistToken}`);
+
+    expect(res.status).toBe(200);
+    // The GET endpoint returns the most recent plan (the one we just created)
+    const sessionWithNotes = res.body.sessions.find(
+      (s: { sessionNotes?: string }) => s.sessionNotes === 'Patient should breathe slowly.',
+    );
+    expect(sessionWithNotes).toBeDefined();
+    expect(sessionWithNotes.sessionNotes).toBe('Patient should breathe slowly.');
   });
 
   it('returns 404 when no plan exists', async () => {

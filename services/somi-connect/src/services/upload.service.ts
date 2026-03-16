@@ -310,10 +310,11 @@ export async function accessUpload(
       // role === 'client'
       const isOwner = uploadDoc.createdByUserId === userId;
       const isFeedbackMedia = uploadDoc.purpose === 'therapist_feedback';
+      // exercise_media is non-PHI library content — clients can view videos in their treatment plan
 
-      if (!isOwner && !isFeedbackMedia) {
+      if (!isOwner && !isFeedbackMedia && !isExerciseMedia) {
         throw forbidden(
-          'Access denied: you can only access your own uploads or feedback media',
+          'Access denied: you can only access your own uploads, feedback media, or exercise videos',
         );
       }
 
@@ -348,8 +349,9 @@ export async function accessUpload(
       bucket: uploadDoc.s3Bucket,
     });
   } else {
-    // Mock fallback
-    accessUrl = `https://s3.amazonaws.com/${uploadDoc.s3Bucket}/${s3Key}?X-Amz-Expires=${PRESIGNED_URL_TTL_SECONDS}&X-Amz-Mock=true`;
+    // Dev mock fallback — return a real public test video so the player works in development.
+    // In production, S3 must be configured and this branch is never reached.
+    accessUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
 
     logger.info('Upload access URL generated (mock)', {
       uploadId,

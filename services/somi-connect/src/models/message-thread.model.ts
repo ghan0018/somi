@@ -54,4 +54,4 @@ const MessageThreadSchema = new Schema<IMessageThreadDoc>(
 // patientId already has unique: true on the field definition
 
 export const MessageThreadModel: Model<IMessageThreadDoc> =
-  mongoose.model<IMessageThreadDoc>('MessageThread', MessageThreadSchema);
+  (mongoose.models['MessageThread'] as Model<IMessageThreadDoc>) ?? mongoose.model<IMessageThreadDoc>('MessageThread', MessageThreadSchema);

@@ -21,6 +21,7 @@ export interface AssignmentInput {
 export interface SessionInput {
   title?: string;
   sessionNotes?: string;
+  notesForTherapistOnly?: string;
   timesPerDay: number;
   assignments: AssignmentInput[];
 }
@@ -81,6 +82,7 @@ export async function resolveSessions(inputSessions: SessionInput[]): Promise<IS
       index: sIdx,
       title: input.title,
       sessionNotes: input.sessionNotes,
+      notesForTherapistOnly: input.notesForTherapistOnly,
       timesPerDay: input.timesPerDay,
       assignments,
     });

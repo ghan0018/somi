@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- SOMI pinwheel logo: 4 leaf-shaped petals radiating from center -->
+
+    <!-- Petal 1: upper-right (teal) -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="0">
+        <path
+            android:fillColor="#6DB6B0"
+            android:pathData="M54,54 C62,46 74,36 70,22 C66,12 52,16 48,30 C45,40 48,50 54,54Z"/>
+    </group>
+
+    <!-- Petal 2: lower-right (gold) — rotated 90° -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="90">
+        <path
+            android:fillColor="#D4A843"
+            android:pathData="M54,54 C62,46 74,36 70,22 C66,12 52,16 48,30 C45,40 48,50 54,54Z"/>
+    </group>
+
+    <!-- Petal 3: lower-left (navy) — rotated 180° -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="180">
+        <path
+            android:fillColor="#1B3A4B"
+            android:pathData="M54,54 C62,46 74,36 70,22 C66,12 52,16 48,30 C45,40 48,50 54,54Z"/>
+    </group>
+
+    <!-- Petal 4: upper-left (navy) — rotated 270° -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="270">
+        <path
+            android:fillColor="#1B3A4B"
+            android:pathData="M54,54 C62,46 74,36 70,22 C66,12 52,16 48,30 C45,40 48,50 54,54Z"/>
+    </group>
+
+</vector>

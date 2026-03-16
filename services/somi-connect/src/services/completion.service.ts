@@ -32,6 +32,7 @@ export interface TodayViewResponse {
   dateLocal: string;
   sessionKey: string;
   sessionTitle?: string;
+  sessionNotes?: string;
   timesPerDay: number;
   assignments: AssignmentTodayView[];
   overallCompletionRate: number;
@@ -109,7 +110,7 @@ export async function getTodayView(
     throw notFound('Treatment plan has no sessions');
   }
 
-  const { sessionKey, title: sessionTitle, timesPerDay, assignments } = session;
+  const { sessionKey, title: sessionTitle, sessionNotes, timesPerDay, assignments } = session;
   const planId = String(plan._id);
 
   // Batch-fetch all exercise versions used in this session
@@ -204,6 +205,7 @@ export async function getTodayView(
     dateLocal,
     sessionKey,
     sessionTitle,
+    sessionNotes,
     timesPerDay,
     assignments: assignmentViews,
     overallCompletionRate,
@@ -221,8 +223,9 @@ export async function recordCompletion(params: {
   occurrence: number;
   exerciseVersionId: string;
   idempotencyKey: string;
+  source?: 'mobile_ios' | 'mobile_android' | 'web';
 }): Promise<{ completion: CompletionResult; isIdempotentReturn: boolean }> {
-  const { patientId, dateLocal, occurrence, exerciseVersionId, idempotencyKey } = params;
+  const { patientId, dateLocal, occurrence, exerciseVersionId, idempotencyKey, source = 'web' } = params;
 
   // Validate dateLocal format
   if (!DATE_LOCAL_RE.test(dateLocal)) {
@@ -316,7 +319,7 @@ export async function recordCompletion(params: {
     exerciseId: matchingAssignment.exerciseId,
     exerciseVersionId,
     completedAt,
-    source: 'web' as const,
+    source,
     idempotencyKey,
   });
 
@@ -342,6 +345,35 @@ export async function recordCompletion(params: {
     },
     isIdempotentReturn: false,
   };
+}
+
+// ---------------------------------------------------------------------------
+// deleteCompletion
+// Remove a previously recorded completion (undo/uncheck). Client-facing.
+// ---------------------------------------------------------------------------
+
+export async function deleteCompletion(params: {
+  patientId: string;
+  dateLocal: string;
+  occurrence: number;
+  exerciseVersionId: string;
+}): Promise<void> {
+  const { patientId, dateLocal, occurrence, exerciseVersionId } = params;
+
+  const result = await CompletionEventModel.deleteOne({
+    patientId,
+    dateLocal,
+    occurrence,
+    exerciseVersionId,
+  });
+
+  if (result.deletedCount === 0) {
+    throw notFound(
+      `No completion found for occurrence ${occurrence} of exerciseVersionId '${exerciseVersionId}' on ${dateLocal}`,
+    );
+  }
+
+  logger.info('Completion deleted', { patientId, dateLocal, occurrence, exerciseVersionId });
 }
 
 // ---------------------------------------------------------------------------
