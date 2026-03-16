@@ -98,7 +98,7 @@ This lets Claude Chat catch conflicts with existing features and write accurate 
 Open Claude Code in this repo and send this message:
 
 ```
-Read REQUIREMENTS.md and LESSONS_LEARNED.md, then execute all pending requirements
+Scan requirements/intake/ and LESSONS_LEARNED.md, then execute all pending specs
 following the operating procedure in CLAUDE.md. Use bypassPermissions mode for all
 sub-agents.
 ```
